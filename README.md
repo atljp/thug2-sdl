@@ -76,7 +76,7 @@ Then install vcpkg via git as described in the Microsoft documentation:
 Install SDL2 via vcpkg: `.\vcpkg.exe install SDL2`, for x86: `.\vcpkg.exe install SDL2:x86-windows`
 
 ### Generating the project file
-Create a partymod-thug2/build directory. Then build the VS Solution with CMake from that directory via Powershell:
+Create a thug2-sdl/build directory. Then build the VS Solution with CMake from that directory via Powershell:
 ```
 cmake .. -A win32 -DCMAKE_TOOLCHAIN_FILE=C:/[vcpkg directory]/scripts/buildsystems/vcpkg.cmake
 ```
