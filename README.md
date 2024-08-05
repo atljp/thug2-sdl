@@ -69,6 +69,7 @@ The build requires the following tools:
 First download and install Visual Studio and CMake like any other GUI application.<br>
 Install git via the Installer from the website or directly in Powershell:
 - `winget install --id Git.Git -e --source winget`
+
 Then install vcpkg via git as described in the Microsoft documentation:
 - `git clone https://github.com/microsoft/vcpkg.git`
 - Run the bootstrap script `cd vcpkg && .\bootstrap-vcpkg.bat`
