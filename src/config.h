@@ -116,6 +116,7 @@ struct controllerbinds {
 };
 
 typedef struct {
+	uint32_t bettergraphics;
 	uint32_t antialiasing;
 	uint32_t hqshadows;
 	uint32_t distanceclipping;

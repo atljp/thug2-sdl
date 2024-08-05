@@ -73,6 +73,7 @@ Install git via the Installer from the website or directly in Powershell:
 Then install vcpkg via git as described in the Microsoft documentation:
 - `git clone https://github.com/microsoft/vcpkg.git`
 - Run the bootstrap script `cd vcpkg && .\bootstrap-vcpkg.bat`
+
 Install SDL2 via vcpkg: `.\vcpkg.exe install SDL2`, for x86: `.\vcpkg.exe install SDL2:x86-windows`
 
 ### Generating the project file

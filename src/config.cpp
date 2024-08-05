@@ -55,6 +55,7 @@ void initPatch() {
 	airdrift = getIniBool(GAMEPLAY_SECTION, "THUGAirDrift", 0, configFile);
 	suninnetgame = getIniBool(EXTRA_SECTION, "SunInNetGame", 0, configFile);
 	boardscuffs = getIniBool(EXTRA_SECTION, "Boardscuffs", 1, configFile);
+	graphics_settings.bettergraphics = getIniBool(GRAPHICS_SECTION, "BetterGraphics", 0, configFile);
 	graphics_settings.antialiasing = getIniBool(GRAPHICS_SECTION, "AntiAliasing", 0, configFile);
 	graphics_settings.hqshadows = getIniBool(GRAPHICS_SECTION, "HQShadows", 0, configFile);
 	graphics_settings.distanceclipping = getIniBool(GRAPHICS_SECTION, "DistanceClipping", 0, configFile);
@@ -125,6 +126,20 @@ void initPatch() {
 	Log::TypedLog(CHN_DLL, "Spindelay: %s\n", spindelay ? "Enabled (PC default)" : "Disabled (Ps2 default)");
 
 	/* Graphic settings */
+
+    
+	if (graphics_settings.bettergraphics) {
+		/* Slight graphical improvements. this may break flash effects */
+		patchNop((void*)0x0044F045, 8);
+		patchNop((void*)0x0048C330, 5);
+		patchNop((void*)0x004B2DC4, 5);
+		patchNop((void*)0x004B3405, 5);
+		/* very high shadow quality */
+		patchByte((void*)(0x004A19E5 + 2), 0x04); 
+		patchByte((void*)(0x004A19EA + 2), 0x04);
+	}
+
+	Log::TypedLog(CHN_DLL, "Better graphics for shadows and edges: %s\n", graphics_settings.bettergraphics ? "Enabled" : "Disabled");
 	Log::TypedLog(CHN_DLL, "Graphic settings - Fullscreen Anti-Aliasing: %s\n", graphics_settings.antialiasing ? "Enabled" : "Disabled");
 	Log::TypedLog(CHN_DLL, "Graphic settings - HQ Shadows: %s\n", graphics_settings.hqshadows ? "Enabled" : "Disabled");
 	Log::TypedLog(CHN_DLL, "Graphic settings - Distance Clipping: %s\n", graphics_settings.distanceclipping ? "Enabled" : "Disabled");
@@ -175,12 +190,6 @@ void patchStaticValues() {
 	/* Blur fix (since Windows Vista) */
 	patchBytesM((void*)ADDR_FUNC_BlurEffect, (BYTE*)"\xB0\x01\xC3\x90\x90", 5);
 
-	/* Slight graphical improvements */
-	patchNop((void*)0x0044F045, 8);
-	//patchNop((void*)0x0048C330, 5); // breaks flash effects
-	patchNop((void*)0x004B2DC4, 5);
-	patchNop((void*)0x004B3405, 5);
-
 	/* No CAS integrity check */
 	patchNop((void*)0x005A8A01, 2);
 
@@ -229,7 +238,6 @@ void __fastcall reorderFlashVertices(void* unused, uint32_t* d3dDevice, void* al
 	vertices[2] = tmp;
 
 	drawPrimitiveUP_Native(unused, d3dDevice, alsodevice, prim, count, vertices, stride);
-	Log::TypedLog(CHN_DLL, "Reordering flash vertices ...\n");
 }
 
 void patchWindow() {
@@ -348,8 +356,6 @@ void writeConfigValues() {
 	*antialiasing = graphics_settings.antialiasing;
 	if (graphics_settings.hqshadows) {
 		*hq_shadows = graphics_settings.hqshadows;
-		patchByte((void*)(0x004A19E5 + 2), 0x04); /* very high shadow quality */
-		patchByte((void*)(0x004A19EA + 2), 0x04);
 	}
 	*distance_clipping = graphics_settings.distanceclipping;
 	*fog = graphics_settings.fog;
