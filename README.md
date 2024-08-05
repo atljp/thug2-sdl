@@ -2,7 +2,7 @@
 
 Place d3d9.dll in the game folder and it will be loaded automatically with any THUG2.exe (except for Clownjob'd THUGTWO).<br>
 
-> Make sure we're using the script heap, cos we're about to create a bunch of scripty stuff.
+This mod is still under development!
 
 ## FEATURES
 
@@ -15,12 +15,13 @@ Place d3d9.dll in the game folder and it will be loaded automatically with any T
 - Blur fix
 - Selectable languages (English, French, German)
 - Selectable button fonts (Keyboard, Ps2, Xbox or Ngc)
-- Stability fixes (e.g., for level merging)
+- Stability fixes (e.g. for level merging)
 - Fixed RNG
 - THUG Airdrift
+- Online play
 - Unlimited three-axes scaling in Create-A-Skater
 - Improved graphics (shadows and edges are slightly sharper, most noticeably on high resolutions)
-- Fixed graphical bug during screen flashes (e.g., Frankling Grind)
+- Fixed graphical bug during screen flashes (e.g. Frankling Grind)
 
 ## TODO
 
@@ -66,7 +67,8 @@ The build requires the following tools:
 - [SDL2](https://www.libsdl.org/)
 
 First download and install Visual Studio and CMake like any other GUI application.<br>
-Install git via the Installer from the website or directly in Powershell: `winget install --id Git.Git -e --source winget`<br>
+Install git via the Installer from the website or directly in Powershell:
+- `winget install --id Git.Git -e --source winget`
 Then install vcpkg via git as described in the Microsoft documentation:
 - `git clone https://github.com/microsoft/vcpkg.git`
 - Run the bootstrap script `cd vcpkg && .\bootstrap-vcpkg.bat`
@@ -84,6 +86,7 @@ The `.sln` file is in the `build` directory. Make sure to select win32 and Relea
 ## CREDITS
 
 - PARTYMANX: Original development of Partymod. Thanks for the help and patience!
-- %.Gone: Clownjob'd mod for THUG2 which provided useful insights
-- Zedek the Plague Doctor: LazyStruct and LazyArray classes, Logger and various script-related helper code
-- Thanks to everyone who tested and gave feedback!
+- %.gone.: Clownjob'd mod for THUG2 which provided useful insights
+- Zedek the Plague Doctor ™: LazyStruct and LazyArray classes, Logger and lots of script-related helper code
+- Hardronix: DirectX9 and general code support
+- Thanks to everyone who playtested and gave feedback!
