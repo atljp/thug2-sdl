@@ -1,0 +1,4 @@
+LIBRARY	"proxytemplate"
+
+    EXPORTS
+            Direct3DCreate9 @1
