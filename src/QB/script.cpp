@@ -302,7 +302,7 @@ bool ScriptSetScreenElementPropsWrapper(Script::LazyStruct* pParams, DummyScript
 					Script::LazyStruct* a = Script::LazyStruct::s_create();
 					Script::LazyStruct* b = Script::LazyStruct::s_create();
 
-					cas_menu_struct->AddChecksum(0x15E31D81, 0x40C698AF); /* mod_vmenu, id */
+					cas_menu_struct->AddChecksum(0x40C698AF, 0x15E31D81); /* id, mod_vmenu */
 					a->AddChecksum(0, 0x7EE0FD2A); /* pad_back */
 					a->AddChecksum(0, 0x36150445); /* showboardmyan */
 					b->AddChecksum(0, 0x2BECBE33); /* turn_off */
