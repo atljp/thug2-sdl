@@ -6,7 +6,7 @@
 static void * (__cdecl * const qbItemMalloc)(size_t size, int unused) = reinterpret_cast<void * (__cdecl *)(size_t size, int unused)>(0x00483410); // ??? ghwt or thaw
 
 // Used for qbstructs
-static void * (__cdecl * const qbMalloc)(size_t size, int unused) = reinterpret_cast<void * (__cdecl *)(size_t size, int unused)>(0x00409030); /* returns struct pointer */
+static void * (__cdecl * const qbMalloc)(size_t size) = reinterpret_cast<void * (__cdecl *)(size_t size)>(0x00409030); /* returns struct pointer */
     
 // Used for arrays
 static void* (__cdecl* const qbArrayMalloc)(size_t size, int unused) = reinterpret_cast<void* (__cdecl*)(size_t size, int unused)>(0x00408F90);

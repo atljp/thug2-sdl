@@ -5,31 +5,81 @@
 #include "malloc.h"
 
 struct scriptsettings mScriptsettings;
-uint32_t sCreateScriptSymbol = 0x0046FE40; /* called in asm wrapper */
-uint32_t sCreateSymbolOfTheFormNameEqualsValue = 0x00472240; /* called in asm wrapper */
+uint32_t sCreateScriptSymbol = 0x0046FE40; /* called in sCreateScriptSymbol wrapper */
+bool walkspinpatched = false;
+bool boardscuffpatched = false;
+bool a = false;
 
 struct DummyScript
 {
 	char unk1[20];
 	Script::LazyStruct* GetParams;
-	char unk[176];
+	char unk2[176];
 	uint32_t mScriptNameChecksum;
 };
 
-struct DummyUnkElem
+struct SkateInstance /* singleton of Skate::Instance() */
 {
 	char unk[888];
 	uint32_t level;
 };
 
-bool CFunc_IsPS2_Patched(void* pParams, DummyScript* pScript) {
+/* -=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=- */
+/* -=-=-=-=-=-=-=-=-=-=-=-=-=- Function definitions -=-=-=-=-=-=-=-=-=-=-=-=-=-= */
+/* -=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=- */
+
+typedef bool __cdecl GetMemCardSpaceAvailable_NativeCall(Script::LazyStruct* pParams, DummyScript* pScript);
+GetMemCardSpaceAvailable_NativeCall* GetMemCardSpaceAvailable_Native = (GetMemCardSpaceAvailable_NativeCall*)(0x005A6E40);
+
+typedef void* __cdecl sCreateScriptSymbol_NativeCall(uint32_t nameChecksum, uint32_t contentsChecksum, const uint8_t* p_data, uint32_t size, const char* p_fileName);
+sCreateScriptSymbol_NativeCall* sCreateScriptSymbol_Native = (sCreateScriptSymbol_NativeCall*)(0x0046FE40);
+
+typedef uint32_t CalculateScriptContentsChecksum_NativeCall(uint8_t* p_token);
+CalculateScriptContentsChecksum_NativeCall* CalculateScriptContentsChecksum_Native = (CalculateScriptContentsChecksum_NativeCall*)(0x0046F960);
+
+typedef bool __cdecl CreateScreenElement_NativeCall(Script::LazyStruct* pParams, DummyScript* pScript);
+CreateScreenElement_NativeCall* CreateScreenElement_Native = (CreateScreenElement_NativeCall*)(0x004AD240);
+
+typedef bool __cdecl SetScreenElementProps_NativeCall(Script::LazyStruct* pParams, DummyScript* pScript);
+SetScreenElementProps_NativeCall* SetScreenElementProps_Native = (SetScreenElementProps_NativeCall*)(0x004AD4C0);
+
+typedef uint8_t* (__thiscall* sCreateSymbolOfTheFormNameEqualsValue_NativeCall)(uint8_t* p_token, uint32_t nameChecksum, const char* p_fileName);
+sCreateSymbolOfTheFormNameEqualsValue_NativeCall sCreateSymbolOfTheFormNameEqualsValue_Native = (sCreateSymbolOfTheFormNameEqualsValue_NativeCall)(0x00472240);
+
+typedef uint32_t __cdecl GenerateCRCFromString_NativeCall(char* pName);
+GenerateCRCFromString_NativeCall* GenerateCRCFromString_Native = (GenerateCRCFromString_NativeCall*)(0x00401B90);
+
+typedef uint32_t __cdecl AddChecksumName_NativeCall(uint32_t checksum, char* p_name);
+AddChecksumName_NativeCall* AddChecksumName_Native = (AddChecksumName_NativeCall*)(0x0046CF60);
+
+typedef uint32_t* __cdecl CSymbolTableEntryResolve_NativeCall(uint32_t checksum);
+CSymbolTableEntryResolve_NativeCall* CSymbolTableEntryResolve_Native = (CSymbolTableEntryResolve_NativeCall*)(0x00478CF0);
+
+typedef void* __cdecl LookUpSymbol_NativeCall(uint32_t checksum);
+LookUpSymbol_NativeCall* LookUpSymbol_Native = (LookUpSymbol_NativeCall*)(0x00478CF0);
+
+typedef void ParseQB_NativeCall(const char* p_fileName, uint8_t* p_qb, int ecx, int assertIfDuplicateSymbols, bool allocateChecksumNameLookupTable);
+ParseQB_NativeCall* ParseQB_Native = (ParseQB_NativeCall*)(0x00472420);
+
+typedef uint32_t __cdecl ScriptGetArray_NativeCall(uint32_t partChecksum);
+ScriptGetArray_NativeCall* ScriptGetArray_Native = (ScriptGetArray_NativeCall*)(0x00478CC0);
+
+typedef uint32_t __cdecl ScriptCleanUpAndRemoveSymbol_NativeCall(uint32_t p_symbolName);
+ScriptCleanUpAndRemoveSymbol_NativeCall* ScriptCleanUpAndRemoveSymbol_Native = (ScriptCleanUpAndRemoveSymbol_NativeCall*)(0x004711D0);
+
+typedef bool ExecuteCFuncPointer_NativeCall(Script::LazyStruct* pParams, DummyScript* pScript);
+ExecuteCFuncPointer_NativeCall* ExecuteCFuncPointer_Native = (ExecuteCFuncPointer_NativeCall*)(0x0044BD30);
+
+/* -=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=- */
+/* -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Patch CFuncs -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= */
+/* -=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=- */
+
+bool CFunc_IsPS2_Patched(void* pParams, DummyScript* pScript)
+{
 	if (pScript->mScriptNameChecksum == 0x6AEC78DA)
 		return true;
 	return false;
 }
-
-typedef bool __cdecl GetMemCardSpaceAvailable_NativeCall(Script::LazyStruct* pParams, DummyScript* pScript);
-GetMemCardSpaceAvailable_NativeCall* GetMemCardSpaceAvailable_Native = (GetMemCardSpaceAvailable_NativeCall*)(0x005A6E40);
 
 bool GetMemCardSpaceAvailable_Patched(Script::LazyStruct* pParams, /* ebp + 0x8 */
 									DummyScript* pScript, /* ebp+0xC */
@@ -60,51 +110,8 @@ bool GetMemCardSpaceAvailable_Patched(Script::LazyStruct* pParams, /* ebp + 0x8 
 	/* GetMemCardSpaceAvailable_Native(pParams, pScript); */
 }
 
-
-
-
-
-/// <summary>
-/// Scripty stuff
-/// </summary>
-
-/*
-typedef void* (__fastcall* sCreateScriptSymbol_NativeCall)(uint32_t nameChecksum, uint32_t contentsChecksum, const char* p_fileName);
-sCreateScriptSymbol_NativeCall sCreateScriptSymbol_Native = (sCreateScriptSymbol_NativeCall)(0x0046FE40);
-*/
-typedef void* __cdecl sCreateScriptSymbol_NativeCall(uint32_t nameChecksum, uint32_t contentsChecksum, const uint8_t* p_data, uint32_t size, const char* p_fileName);
-sCreateScriptSymbol_NativeCall* sCreateScriptSymbol_Native = (sCreateScriptSymbol_NativeCall*)(0x0046FE40);
-
-typedef uint32_t CalculateScriptContentsChecksum_NativeCall(uint8_t* p_token);
-CalculateScriptContentsChecksum_NativeCall* CalculateScriptContentsChecksum_Native = (CalculateScriptContentsChecksum_NativeCall*)(0x0046F960);
-
-typedef bool __cdecl CreateScreenElement_NativeCall(Script::LazyStruct* pParams, DummyScript* pScript);
-CreateScreenElement_NativeCall* CreateScreenElement_Native = (CreateScreenElement_NativeCall*)(0x004AD240);
-
-typedef bool __cdecl SetScreenElementProps_NativeCall(Script::LazyStruct* pParams, DummyScript* pScript);
-SetScreenElementProps_NativeCall* SetScreenElementProps_Native = (SetScreenElementProps_NativeCall*)(0x004AD4C0);
-
-typedef void __cdecl sCreateSymbolOfTheFormNameEqualsValue_NativeCall(uint8_t* p_token, uint32_t nameChecksum, const char* p_fileName);
-sCreateSymbolOfTheFormNameEqualsValue_NativeCall* sCreateSymbolOfTheFormNameEqualsValue_Native = (sCreateSymbolOfTheFormNameEqualsValue_NativeCall*)(0x00472240);
-
-typedef uint32_t __cdecl GenerateCRCFromString_NativeCall(char* pName);
-GenerateCRCFromString_NativeCall* GenerateCRCFromString_Native = (GenerateCRCFromString_NativeCall*)(0x00401B90);
-
-typedef uint32_t __cdecl AddChecksumName_NativeCall(uint32_t checksum, char* p_name);
-AddChecksumName_NativeCall* AddChecksumName_Native = (AddChecksumName_NativeCall*)(0x0046CF60);
-
-typedef uint32_t* __cdecl CSymbolTableEntryResolve_NativeCall(uint32_t checksum);
-CSymbolTableEntryResolve_NativeCall* CSymbolTableEntryResolve_Native = (CSymbolTableEntryResolve_NativeCall*)(0x00478CF0);
-
-
-typedef void* __cdecl LookUpSymbol_NativeCall(uint32_t checksum);
-LookUpSymbol_NativeCall* LookUpSymbol_Native = (LookUpSymbol_NativeCall*)(0x00478CF0);
-
-bool walkspinpatched = false;
-bool boardscuffpatched = false;
-bool a = false;
-void LookUpSymbol_Patched(uint32_t checksum) {
-
+void LookUpSymbol_Patched(uint32_t checksum)
+{
 	if (mScriptsettings.airdrift && checksum == 0x1CA80417 && !walkspinpatched) {
 		patchDWord((void*)(uint32_t)LookUpSymbol_Native(checksum), 0);
 		walkspinpatched = true;
@@ -116,11 +123,8 @@ void LookUpSymbol_Patched(uint32_t checksum) {
 	LookUpSymbol_Native(checksum);
 }
 
-typedef void ParseQB_NativeCall(const char* p_fileName, uint8_t* p_qb, int ecx, int assertIfDuplicateSymbols, bool allocateChecksumNameLookupTable);
-ParseQB_NativeCall* ParseQB_Native = (ParseQB_NativeCall*)(0x00472420);
-
-void ParseQB_Patched(const char *p_fileName, uint8_t *p_qb, int ecx, int assertIfDuplicateSymbols, bool allocateChecksumNameLookupTable) {
-	
+void ParseQB_Patched(const char *p_fileName, uint8_t *p_qb, int ecx, int assertIfDuplicateSymbols, bool allocateChecksumNameLookupTable)
+{
 	// ecx is unused, default: 1
 	if (!strcmp(p_fileName, "scripts\\game\\game.qb")) {
 		ParseQB_Native(p_fileName, (uint8_t*)&game_new, 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
@@ -128,40 +132,19 @@ void ParseQB_Patched(const char *p_fileName, uint8_t *p_qb, int ecx, int assertI
 	else {
 		ParseQB_Native(p_fileName, p_qb, 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
 	}
-		
-	
 }
 
-typedef uint32_t __cdecl ScriptGetArray_NativeCall(uint32_t partChecksum);
-ScriptGetArray_NativeCall* ScriptGetArray_Native = (ScriptGetArray_NativeCall*)(0x00478CC0);
-
-typedef uint32_t __cdecl ScriptCleanUpAndRemoveSymbol_NativeCall(uint32_t p_symbolName);
-ScriptCleanUpAndRemoveSymbol_NativeCall* ScriptCleanUpAndRemoveSymbol_Native = (ScriptCleanUpAndRemoveSymbol_NativeCall*)(0x004711D0);
-
-uint32_t __fastcall removeScript(uint32_t partChecksum) {
-	__asm {
-		push ecx
-		mov eax, 0x478CC0
-		CALL eax
-		pop ecx
-		test eax, eax
-		jz LAB_RET
-		push eax
-		mov eax, 0x4711D0
-		CALL eax
-		pop ecx
-	LAB_RET:
-	}
-	/*
+uint32_t __fastcall removeScript(uint32_t partChecksum)
+{	
 	uint32_t p_script = 0;
 	p_script = ScriptGetArray_Native(partChecksum);
 	if (p_script)	
 		p_script = ScriptCleanUpAndRemoveSymbol_Native(p_script);
 	return p_script;
-	*/
 }
 
-void __fastcall sCreateScriptSymbolWrapper(uint32_t size, const uint8_t* p_data, uint32_t nameChecksum, uint32_t contentsChecksum, const char* p_fileName) {
+void __fastcall sCreateScriptSymbolWrapper(uint32_t size, const uint8_t* p_data, uint32_t nameChecksum, uint32_t contentsChecksum, const char* p_fileName)
+{
 	__asm {
 		push dword ptr ss : [ebp + 0x10] /* *p_fileName */
 		push dword ptr ss : [ebp + 0xC] /* contentsChecksum */
@@ -172,24 +155,6 @@ void __fastcall sCreateScriptSymbolWrapper(uint32_t size, const uint8_t* p_data,
 		mov esp, ebp /* epilogue */
 		pop ebp
 		ret 0x0C
-	}
-}
-
-/* sCreateSymbolOfTheFormNameEqualsValueWrapper((uint8_t*)skateshop_scaling_options_new, 0xD2BE4CAF, "scripts\\myan.qb"); 0xD2BE4CAF = skateshop_scaling_options */
-const char* p_fileName = "scripts\\myan.qb";
-void __fastcall loadXYZScales() {
-	__asm {
-		push ebp
-		mov ebp, esp
-		mov dword ptr ss : [ebp - 0x8], offset p_fileName /* *p_fileName */
-		mov dword ptr ss : [ebp - 0xC], 0xD2BE4CAF /* nameChecksum */
-		mov dword ptr ss : [ebp - 0x10], offset skateshop_scaling_options_new /* *p_data */
-		push dword ptr ss : [ebp - 0x8] /* *p_fileName */
-		push dword ptr ss : [ebp - 0xC] /* nameChecksum */
-		mov ecx, dword ptr ss : [ebp - 0x10] /* *p_data */
-		call dword ptr ds : sCreateSymbolOfTheFormNameEqualsValue
-		mov esp, ebp
-		pop ebp
 	}
 }
 
@@ -216,21 +181,19 @@ void __cdecl loadScripts()
 	uint32_t contentsChecksum3 = CalculateScriptContentsChecksum_Native((uint8_t*)showboardmyan);
 	sCreateScriptSymbolWrapper(0x9C, (uint8_t*)showboardmyan, 0x36150445, contentsChecksum3, "scripts\\myan.qb"); /* new script: showboardmyan 0x36150445 */
 
-	
-
-	//if (mScriptsettings.suninnetgame)
-	//	removeScript(0x8054f197); /* disablesun */
+	if (mScriptsettings.suninnetgame)
+		removeScript(0x8054f197); /* disablesun */
 }
 
 //https://github.com/thug1src/thug/blob/d8eb7147663d28c5cff3249a6df7d98e692741cb/Code/Gfx/2D/ScreenElemMan.cpp#L986
 bool ScriptCreateScreenElementWrapper(Script::LazyStruct* pParams, DummyScript* pScript)
 {
-	DummyUnkElem *unkElem = (DummyUnkElem*)*(uint32_t*)(0x007CE478);
+	SkateInstance *Skate = (SkateInstance*)*(uint32_t*)(0x007CE478);
 	uint32_t p_checksum = 0;
 	uint32_t p_checksum2 = 0;
 	/* float values are processed according to the IEEE - 754 specification */
 
-	if (unkElem->level == 0xE92ECAFE && getaspectratio() > 1.34f) { /* level: load_mainmenu */
+	if (Skate->level == 0xE92ECAFE && getaspectratio() > 1.34f) { /* level: load_mainmenu */
 
 		if (pScript->mScriptNameChecksum == 0x7C92D11A) {  /* script: make_mainmenu_3d_plane */
 
@@ -276,16 +239,13 @@ bool ScriptCreateScreenElementWrapper(Script::LazyStruct* pParams, DummyScript* 
 	return CreateScreenElement_Native(pParams, pScript);
 }
 
-typedef bool ExecuteCFuncPointer_NativeCall(Script::LazyStruct* pParams, DummyScript* pScript);
-ExecuteCFuncPointer_NativeCall* ExecuteCFuncPointer_Native = (ExecuteCFuncPointer_NativeCall*)(0x0044BD30);
-
-bool ScriptSetScreenElementPropsWrapper(Script::LazyStruct* pParams, DummyScript* pScript) {
-
-	DummyUnkElem* unkElem = (DummyUnkElem*)*(uint32_t*)(0x007CE478);
+bool ScriptSetScreenElementPropsWrapper(Script::LazyStruct* pParams, DummyScript* pScript)
+{
+	SkateInstance* Skate = (SkateInstance*)*(uint32_t*)(0x007CE478);
 	uint32_t p_checksum = 0;
 	bool done = FALSE;
 
-	if (unkElem->level == 0xE92ECAFE) { /* level: load_mainmenu */
+	if (Skate->level == 0xE92ECAFE) { /* level: load_mainmenu */
 
 		if (pScript->mScriptNameChecksum == 0xE2873769) { /* script: create_cas_modifier_menu */
 
@@ -293,7 +253,8 @@ bool ScriptSetScreenElementPropsWrapper(Script::LazyStruct* pParams, DummyScript
 			cas_menu_struct->AddChecksum(0, 0xB94B715A); /* add_scaling */
 			if (ExecuteCFuncPointer_Native(cas_menu_struct, pScript))
 			{
-				if (!done) {
+				if (!done)
+				{
 					done = TRUE;
 					bool x = SetScreenElementProps_Native(pParams, pScript);
 					RunScript(0x36150445, pScript->GetParams, nullptr, nullptr); /* showboardmyan */
@@ -313,7 +274,6 @@ bool ScriptSetScreenElementPropsWrapper(Script::LazyStruct* pParams, DummyScript
 					testarray->SetInteger(0, (int)a);
 					cas_menu_struct->AddArray(0x475BF03C, testarray); /* event_handlers */
 					SetScreenElementProps_Native(cas_menu_struct, pScript);
-
 
 					/* clean up allocated space */
 					if (b) {
@@ -335,25 +295,23 @@ bool ScriptSetScreenElementPropsWrapper(Script::LazyStruct* pParams, DummyScript
 					}
 				}
 			}
-		} else if (pScript->mScriptNameChecksum == 0x1B95F333) { /* script: create_scale_options_menu */
-
+		} else if (pScript->mScriptNameChecksum == 0x1B95F333) /* script: create_scale_options_menu */
+		{
 			pParams->GetChecksum(0x40C698AF, &p_checksum, false); /* id */
 
-			if (p_checksum == 0x5E430716) { /* scaling_vmenu */
+			if (p_checksum == 0x5E430716) /* scaling_vmenu */
+			{ 
 				removeScript(0xD2BE4CAF); /* skateshop_scaling_options */
-				__asm {push ecx}
-				loadXYZScales(); /* data must not contain newlines but must end with one (token 0x01). returns pointer to last newline token */
-				__asm {pop ecx}
+				sCreateSymbolOfTheFormNameEqualsValue_Native((uint8_t*)skateshop_scaling_options_new, 0xD2BE4CAF, "scripts\\myan.qb"); /* data must not contain newlines but must end with one (token 0x01). returns pointer to last newline token */
 			}		
 		}
 	}
-	
 	/* scripts/mainmenu/levels/mainmenu/scalingmenu.txt*/
 	return SetScreenElementProps_Native(pParams, pScript);
 }
 
-void patchScripts() {
-
+void patchScripts()
+{
 	/* First, get config from INI. struct defined in config.h */
 	getScriptSettings(&mScriptsettings);
 
@@ -363,13 +321,12 @@ void patchScripts() {
 	patchDWord((void*)0x00680C84, (uint32_t)&ScriptSetScreenElementPropsWrapper);
 	patchCall((void*)0x00474F25, LookUpSymbol_Patched); /* accesses the global hash map */
 	
-
 	printf("Initializing CFuncs\n");
 
 	//TEST
 	//patchCall((void*)0x0046EEA3, ParseQB_Patched); /* loads script files */
-	uint32_t bb = 0xDEADBEEF;
-	printf("0x%08x\n", bb);
+	//uint32_t bb = 0xDEADBEEF;
+	//printf("0x%08x\n", bb);
 
 	patchJump((void*)0x005A5B32, loadScripts); /* loads single functions of scripts and overwrites existing ones */
 }

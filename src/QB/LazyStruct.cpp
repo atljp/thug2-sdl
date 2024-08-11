@@ -13,10 +13,6 @@ namespace Script {
 
 	void LazyStruct::Initialize()
 	{
-		first = 0;
-		unk0 = 0;
-		unk2 = 0;
-		unk3 = 0;
 		StructInitialize(this);
 	}
 
@@ -48,7 +44,7 @@ namespace Script {
 
 	LazyStruct* LazyStruct::s_create()
 	{
-		LazyStruct* result = (LazyStruct*)qbMalloc(sizeof(LazyStruct), 1);
+		LazyStruct* result = (LazyStruct*)qbMalloc(sizeof(LazyStruct));
 
 		if (!result)
 		{
