@@ -86,11 +86,24 @@ namespace Script
     // Set integer
     // ----------------------------
 
-    typedef void(__thiscall* SetInteger_NativeCall)(LazyArray* arr, uint32_t index, int int_val);
+    typedef void (__thiscall* SetInteger_NativeCall)(LazyArray* arr, uint32_t index, int int_val);
     SetInteger_NativeCall SetInteger_Native = (SetInteger_NativeCall)(0x0046CB10);
 
     void LazyArray::SetInteger(uint32_t index, int int_val)
     {
         SetInteger_Native(this, index, int_val);
     }  
+
+    // ----------------------------
+    // Set integer
+    // ----------------------------
+
+    typedef void (__thiscall* SetInteger2_NativeCall)(LazyArray* arr);
+    SetInteger2_NativeCall SetInteger2_Native = (SetInteger2_NativeCall)(0x0046CB10);
+
+    void LazyArray::SetInteger2()
+    {
+        SetInteger2_Native(this);
+    }
+
 }

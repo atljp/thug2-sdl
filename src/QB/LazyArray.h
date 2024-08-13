@@ -70,6 +70,7 @@ namespace Script
             void Clear();
             void SetSizeAndType(int size, uint8_t type);
             void SetInteger(uint32_t index, int int_val);
+            void SetInteger2();
             
 	};
     

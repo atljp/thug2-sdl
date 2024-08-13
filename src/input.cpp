@@ -343,7 +343,7 @@ void pollController(device* dev, SDL_GameController* controller) {
 				dev->controlData[20] |= 0x01 << 1;
 			}
 			if (getButton(controller, padbinds.caveman2)) {
-				printf("Caveman2\n");
+				//printf("Caveman2\n");
 				dev->controlData[20] |= 0x01 << 0; //Just Caveman but also "Zoom Out" in Create-A-Goal
 			}
 		}
@@ -565,7 +565,11 @@ void pollKeyboard(device* dev) {
 	}
 
 	// Caveman
-	if (keyboardState[keybinds.caveman] | keyboardState[keybinds.caveman2]) {
+	if (keyboardState[keybinds.caveman]) {
+		dev->controlData[20] |= 0x01 << 1;
+	}
+			
+	if (keyboardState[keybinds.caveman2]) {
 		dev->controlData[20] |= 0x01 << 0;
 	}
 

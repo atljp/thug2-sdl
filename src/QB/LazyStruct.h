@@ -73,7 +73,7 @@ namespace Script
 		void AppendStructure(const LazyStruct* append_from);
 		void AddArrayPointer(uint32_t id, void* arr);
 
-		void* GetArray(uint32_t qbKey);
+		Script::LazyArray* GetArray(uint32_t nameChecksum, uint32_t checksum, const Script::LazyStruct* p_array);
 		char* GetString(uint32_t qbKey);
 		LazyStruct* GetStruct(uint32_t qbKey);
 	};

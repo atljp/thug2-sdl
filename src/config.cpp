@@ -21,6 +21,7 @@ uint8_t buttonfont;
 uint8_t intromovies;
 uint8_t spindelay;
 uint8_t airdrift;
+uint8_t dropdowncontrol;
 uint8_t suninnetgame;
 uint8_t boardscuffs;
 uint8_t Ps2Controls;
@@ -66,6 +67,7 @@ void initPatch() {
 	isWindowed = getIniBool(GRAPHICS_SECTION, "Windowed", 0, configFile);
 	isBorderless = getIniBool(GRAPHICS_SECTION, "Borderless", 0, configFile);
 	Ps2Controls = getIniBool(CONTROLS_SECTION, "Ps2Controls", 1, configFile);
+	dropdowncontrol = GetPrivateProfileInt(CONTROLS_SECTION, "DropDownControl", 1, configFile);
 	invertRXplayer1 = getIniBool(CONTROLS_SECTION, "InvertRXPlayer1", 0, configFile);
 	invertRYplayer1 = getIniBool(CONTROLS_SECTION, "InvertRYPlayer1", 0, configFile);
 
@@ -80,7 +82,6 @@ void initPatch() {
 	Log::TypedLog(CHN_DLL, "DIRECTORY: %s\n", (LPSTR)executableDirectory);
 	Log::TypedLog(CHN_DLL, "Patch initialized\n");
 	Log::TypedLog(CHN_DLL, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Initializing INI settings\n");
-
 
 	/* Set language */
 	patchNop((void*)ADDR_FUNC_LangFromReg, 5);		//Don't get the value from registry
@@ -118,6 +119,15 @@ void initPatch() {
 	}
 	Log::TypedLog(CHN_DLL, "Airdrift: %s\n", airdrift ? "Enabled" : "Disabled");
 
+	/* Drop Down Control */
+	printf("DDCONTROL: %d\n", dropdowncontrol);
+	switch (dropdowncontrol) {
+		case 0: Log::TypedLog(CHN_DLL, "DropDownControl: L2+R2 (PC default)\n"); break;
+		case 1: Log::TypedLog(CHN_DLL, "DropDownControl: L1\n"); break;
+		case 2: Log::TypedLog(CHN_DLL, "DropDownControl: R1\n"); break;
+		case 3: Log::TypedLog(CHN_DLL, "DropDownControl: L2\n"); break;
+		case 4: Log::TypedLog(CHN_DLL, "DropDownControl: R2\n"); break;
+	}
 	/* Set spindelay. Off is Ps2 default, on is PC default (value = 100) */
 	if (!spindelay) {
 		patchNop((void*)ADDR_SpinLagL, 2);
@@ -126,8 +136,6 @@ void initPatch() {
 	Log::TypedLog(CHN_DLL, "Spindelay: %s\n", spindelay ? "Enabled (PC default)" : "Disabled (Ps2 default)");
 
 	/* Graphic settings */
-
-    
 	if (graphics_settings.bettergraphics) {
 		/* Slight graphical improvements. this may break flash effects */
 		patchNop((void*)0x0044F045, 8);
@@ -394,6 +402,7 @@ void getScriptSettings(struct scriptsettings* scriptsettingsOut) {
 		scriptsettingsOut->airdrift = airdrift;
 		scriptsettingsOut->suninnetgame = suninnetgame;
 		scriptsettingsOut->boardscuffs = boardscuffs;
+		scriptsettingsOut->dropdowncontrol = dropdowncontrol;
 	}
 }
 

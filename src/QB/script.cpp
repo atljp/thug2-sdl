@@ -55,9 +55,6 @@ AddChecksumName_NativeCall* AddChecksumName_Native = (AddChecksumName_NativeCall
 typedef uint32_t* __cdecl CSymbolTableEntryResolve_NativeCall(uint32_t checksum);
 CSymbolTableEntryResolve_NativeCall* CSymbolTableEntryResolve_Native = (CSymbolTableEntryResolve_NativeCall*)(0x00478CF0);
 
-typedef void* __cdecl LookUpSymbol_NativeCall(uint32_t checksum);
-LookUpSymbol_NativeCall* LookUpSymbol_Native = (LookUpSymbol_NativeCall*)(0x00478CF0);
-
 typedef void ParseQB_NativeCall(const char* p_fileName, uint8_t* p_qb, int ecx, int assertIfDuplicateSymbols, bool allocateChecksumNameLookupTable);
 ParseQB_NativeCall* ParseQB_Native = (ParseQB_NativeCall*)(0x00472420);
 
@@ -70,11 +67,14 @@ ScriptCleanUpAndRemoveSymbol_NativeCall* ScriptCleanUpAndRemoveSymbol_Native = (
 typedef bool ExecuteCFuncPointer_NativeCall(Script::LazyStruct* pParams, DummyScript* pScript);
 ExecuteCFuncPointer_NativeCall* ExecuteCFuncPointer_Native = (ExecuteCFuncPointer_NativeCall*)(0x0044BD30);
 
+typedef Script::LazyArray* __cdecl GlobalGetArray_NativeCall(uint32_t nameChecksum, uint32_t checksum, const Script::LazyStruct* p_struct);
+GlobalGetArray_NativeCall* GlobalGetArray_Native = (GlobalGetArray_NativeCall*)(0x00479070);
+
 /* -=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=- */
-/* -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Patch CFuncs -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= */
+/* -=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Patched CFuncs =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= */
 /* -=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=- */
 
-bool CFunc_IsPS2_Patched(void* pParams, DummyScript* pScript)
+bool IsPS2_Patched(void* pParams, DummyScript* pScript)
 {
 	if (pScript->mScriptNameChecksum == 0x6AEC78DA)
 		return true;
@@ -110,85 +110,9 @@ bool GetMemCardSpaceAvailable_Patched(Script::LazyStruct* pParams, /* ebp + 0x8 
 	/* GetMemCardSpaceAvailable_Native(pParams, pScript); */
 }
 
-void LookUpSymbol_Patched(uint32_t checksum)
+bool CreateScreenElement_Wrapper(Script::LazyStruct* pParams, DummyScript* pScript)
 {
-	if (mScriptsettings.airdrift && checksum == 0x1CA80417 && !walkspinpatched) {
-		patchDWord((void*)(uint32_t)LookUpSymbol_Native(checksum), 0);
-		walkspinpatched = true;
-	}
-	else if (!mScriptsettings.boardscuffs && checksum == 0x9CE4DA4F && !boardscuffpatched) {
-		patchDWord((void*)(uint32_t)LookUpSymbol_Native(checksum), 0);
-		boardscuffpatched = true;
-	}
-	LookUpSymbol_Native(checksum);
-}
-
-void ParseQB_Patched(const char *p_fileName, uint8_t *p_qb, int ecx, int assertIfDuplicateSymbols, bool allocateChecksumNameLookupTable)
-{
-	// ecx is unused, default: 1
-	if (!strcmp(p_fileName, "scripts\\game\\game.qb")) {
-		ParseQB_Native(p_fileName, (uint8_t*)&game_new, 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
-	}
-	else {
-		ParseQB_Native(p_fileName, p_qb, 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
-	}
-}
-
-uint32_t __fastcall removeScript(uint32_t partChecksum)
-{	
-	uint32_t p_script = 0;
-	p_script = ScriptGetArray_Native(partChecksum);
-	if (p_script)	
-		p_script = ScriptCleanUpAndRemoveSymbol_Native(p_script);
-	return p_script;
-}
-
-void __fastcall sCreateScriptSymbolWrapper(uint32_t size, const uint8_t* p_data, uint32_t nameChecksum, uint32_t contentsChecksum, const char* p_fileName)
-{
-	__asm {
-		push dword ptr ss : [ebp + 0x10] /* *p_fileName */
-		push dword ptr ss : [ebp + 0xC] /* contentsChecksum */
-		push dword ptr ss : [ebp + 0x8] /* nameChecksum */
-		mov ebx, edx /* *p_data */
-		mov eax, ecx  /* size */
-		call dword ptr ds : sCreateScriptSymbol
-		mov esp, ebp /* epilogue */
-		pop ebp
-		ret 0x0C
-	}
-}
-
-void __cdecl loadScripts()
-{
-	/* qb data in scriptcontent.h */
-
-	removeScript(0x3B4548B8); /* POC */
-	uint32_t contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)enter_kb_chat_new);
-	sCreateScriptSymbolWrapper(0x9E, (uint8_t*)enter_kb_chat_new, 0x3B4548B8, contentsChecksum, "scripts\\game\\game.qb");
-
-	//removeScript(0x5C51FEAB); /* test */
-	//uint32_t contentsChecksum2 = CalculateScriptContentsChecksum_Native((uint8_t*)enablesun_new);
-	//sCreateScriptSymbolWrapper(0x2B, (uint8_t*)enablesun_new, 0x5C51FEAB, contentsChecksum2, "scripts\\game\\env_fx.qb");
-
-	removeScript(0x9F95228A); /* scalingmenu_get_limits */
-	uint32_t temp = CalculateScriptContentsChecksum_Native((uint8_t*)scalingmenu_get_limits_original);
-	//printf("AAAAAAAA: 0x%08x\n", temp);
-	sCreateScriptSymbolWrapper(0x37, (uint8_t*)scalingmenu_get_limits_addition, 0x9F95228A, temp, "scripts\\myan.qb");
-
-	//removeScript(0x1B95F333); /* create_scale_options_menu */
-	//sCreateScriptSymbolWrapper(0x4EC, (uint8_t*)create_scale_options_menu_addition1, 0x1B95F333, 0xFC4A3248, "scripts\\myan.qb"); /* 0xFC4A3248 = contentsChecksum of original create_scale_options_menu script */
-
-	uint32_t contentsChecksum3 = CalculateScriptContentsChecksum_Native((uint8_t*)showboardmyan);
-	sCreateScriptSymbolWrapper(0x9C, (uint8_t*)showboardmyan, 0x36150445, contentsChecksum3, "scripts\\myan.qb"); /* new script: showboardmyan 0x36150445 */
-
-	if (mScriptsettings.suninnetgame)
-		removeScript(0x8054f197); /* disablesun */
-}
-
-//https://github.com/thug1src/thug/blob/d8eb7147663d28c5cff3249a6df7d98e692741cb/Code/Gfx/2D/ScreenElemMan.cpp#L986
-bool ScriptCreateScreenElementWrapper(Script::LazyStruct* pParams, DummyScript* pScript)
-{
-	SkateInstance *Skate = (SkateInstance*)*(uint32_t*)(0x007CE478);
+	SkateInstance* Skate = (SkateInstance*)*(uint32_t*)(0x007CE478);
 	uint32_t p_checksum = 0;
 	uint32_t p_checksum2 = 0;
 	/* float values are processed according to the IEEE - 754 specification */
@@ -239,7 +163,7 @@ bool ScriptCreateScreenElementWrapper(Script::LazyStruct* pParams, DummyScript* 
 	return CreateScreenElement_Native(pParams, pScript);
 }
 
-bool ScriptSetScreenElementPropsWrapper(Script::LazyStruct* pParams, DummyScript* pScript)
+bool SetScreenElementProps_Wrapper(Script::LazyStruct* pParams, DummyScript* pScript)
 {
 	SkateInstance* Skate = (SkateInstance*)*(uint32_t*)(0x007CE478);
 	uint32_t p_checksum = 0;
@@ -295,32 +219,182 @@ bool ScriptSetScreenElementPropsWrapper(Script::LazyStruct* pParams, DummyScript
 					}
 				}
 			}
-		} else if (pScript->mScriptNameChecksum == 0x1B95F333) /* script: create_scale_options_menu */
+		}
+		else if (pScript->mScriptNameChecksum == 0x1B95F333) /* script: create_scale_options_menu */
 		{
 			pParams->GetChecksum(0x40C698AF, &p_checksum, false); /* id */
 
 			if (p_checksum == 0x5E430716) /* scaling_vmenu */
-			{ 
+			{
 				removeScript(0xD2BE4CAF); /* skateshop_scaling_options */
 				sCreateSymbolOfTheFormNameEqualsValue_Native((uint8_t*)skateshop_scaling_options_new, 0xD2BE4CAF, "scripts\\myan.qb"); /* data must not contain newlines but must end with one (token 0x01). returns pointer to last newline token */
-			}		
+			}
 		}
 	}
 	/* scripts/mainmenu/levels/mainmenu/scalingmenu.txt*/
 	return SetScreenElementProps_Native(pParams, pScript);
 }
 
+/* -=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=- */
+/* -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Scripty Stuff =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= */
+/* -=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=- */
+
+void initScriptPatch()
+{
+	setDropDownKeys();
+	loadScripts();
+}
+
+void LookUpSymbol_Patched(uint32_t checksum)
+{
+	if (mScriptsettings.airdrift && checksum == 0x1CA80417 && !walkspinpatched) {
+		patchDWord((void*)(uint32_t)CSymbolTableEntryResolve_Native(checksum), 0);
+		walkspinpatched = true;
+	}
+	else if (!mScriptsettings.boardscuffs && checksum == 0x9CE4DA4F && !boardscuffpatched) {
+		patchDWord((void*)(uint32_t)CSymbolTableEntryResolve_Native(checksum), 0);
+		boardscuffpatched = true;
+	}
+	if (walkspinpatched && boardscuffpatched)
+		patchBytesM((void*)0x00474F25, (BYTE*)"\xE8\xC6\x3D\x00\x00", 5); /* unhook */
+
+	CSymbolTableEntryResolve_Native(checksum);
+}
+
+void ParseQB_Patched(const char *p_fileName, uint8_t *p_qb, int unused, int assertIfDuplicateSymbols, bool allocateChecksumNameLookupTable)
+{
+	if (!strcmp(p_fileName, "scripts\\game\\game.qb")) {
+		ParseQB_Native(p_fileName, (uint8_t*)&game_new, 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
+	}
+	else {
+		ParseQB_Native(p_fileName, p_qb, 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
+	}
+}
+
+uint32_t __fastcall removeScript(uint32_t partChecksum)
+{	
+	uint32_t p_script = 0;
+	p_script = ScriptGetArray_Native(partChecksum);
+	if (p_script)	
+		p_script = ScriptCleanUpAndRemoveSymbol_Native(p_script);
+	return p_script;
+}
+
+void __fastcall sCreateScriptSymbolWrapper(uint32_t size, const uint8_t* p_data, uint32_t nameChecksum, uint32_t contentsChecksum, const char* p_fileName)
+{
+	__asm {
+		push dword ptr ss : [ebp + 0x10] /* *p_fileName */
+		push dword ptr ss : [ebp + 0xC] /* contentsChecksum */
+		push dword ptr ss : [ebp + 0x8] /* nameChecksum */
+		mov ebx, edx /* *p_data */
+		mov eax, ecx  /* size */
+		call dword ptr ds : sCreateScriptSymbol
+		mov esp, ebp /* epilogue */
+		pop ebp
+		ret 0x0C
+	}
+}
+
+void loadScripts()
+{
+	/* qb data in scriptcontent.h */
+
+	removeScript(0x3B4548B8); /* POC */
+	uint32_t contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)enter_kb_chat_new);
+	sCreateScriptSymbolWrapper(0x9E, (uint8_t*)enter_kb_chat_new, 0x3B4548B8, contentsChecksum, "scripts\\game\\game.qb");
+
+	//removeScript(0x5C51FEAB); /* test */
+	//uint32_t contentsChecksum2 = CalculateScriptContentsChecksum_Native((uint8_t*)enablesun_new);
+	//sCreateScriptSymbolWrapper(0x2B, (uint8_t*)enablesun_new, 0x5C51FEAB, contentsChecksum2, "scripts\\game\\env_fx.qb");
+
+	removeScript(0x9F95228A); /* scalingmenu_get_limits */
+	uint32_t temp = CalculateScriptContentsChecksum_Native((uint8_t*)scalingmenu_get_limits_original);
+	//printf("AAAAAAAA: 0x%08x\n", temp);
+	sCreateScriptSymbolWrapper(0x37, (uint8_t*)scalingmenu_get_limits_addition, 0x9F95228A, temp, "scripts\\myan.qb");
+
+	//removeScript(0x1B95F333); /* create_scale_options_menu */
+	//sCreateScriptSymbolWrapper(0x4EC, (uint8_t*)create_scale_options_menu_addition1, 0x1B95F333, 0xFC4A3248, "scripts\\myan.qb"); /* 0xFC4A3248 = contentsChecksum of original create_scale_options_menu script */
+
+	uint32_t contentsChecksum3 = CalculateScriptContentsChecksum_Native((uint8_t*)showboardmyan);
+	sCreateScriptSymbolWrapper(0x9C, (uint8_t*)showboardmyan, 0x36150445, contentsChecksum3, "scripts\\myan.qb"); /* new script: showboardmyan 0x36150445 */
+
+	if (mScriptsettings.suninnetgame)
+		removeScript(0x8054f197); /* disablesun */
+}
+
+void setDropDownKeys()
+{
+	/*
+	if (pref_dropdown = L1)
+		change GrindRelease = [ {
+			trigger = { Press l1 100 }
+			scr = SkateInOrBail
+			params = { GrindRelease grindbail = Airborne moveright = -5 movey = 5 }
+		} ]
+	endif
+	*/
+	
+	if (mScriptsettings.dropdowncontrol > 1)
+	{
+		Script::LazyStruct* grindrelease = Script::LazyStruct::s_create();
+		Script::LazyStruct* trigger = Script::LazyStruct::s_create();
+		Script::LazyStruct* params = Script::LazyStruct::s_create();
+
+		printf("received ddcontrol: %d\n", mScriptsettings.dropdowncontrol);
+
+		if (mScriptsettings.dropdowncontrol == 2) // black and white
+		{
+			/*Set L1*/
+			trigger->AddChecksum(0, 0x823B8342); /*press*/
+			trigger->AddChecksum(0, 0x767A45D7); /*black*/
+			printf("L1\n");
+		}
+		else if (mScriptsettings.dropdowncontrol == 3)
+		{
+			/*Set R1*/
+			trigger->AddChecksum(0, 0x823B8342); /*press*/
+			trigger->AddChecksum(0, 0xBD30325B); /*white*/
+		}
+		else if (mScriptsettings.dropdowncontrol == 4)
+		{
+			/*Set L2*/
+			trigger->AddChecksum(0, 0x823B8342); /*press*/
+			trigger->AddChecksum(0, 0xBFB9982B); /*L2*/
+		}
+		else if (mScriptsettings.dropdowncontrol == 5)
+		{
+			/*Set R2*/
+			trigger->AddChecksum(0, 0x823B8342); /*press*/
+			trigger->AddChecksum(0, 0x6BF8A7F4); /*R2*/
+		}
+
+		trigger->AddInteger(0, 100);
+
+		params->AddChecksum(0, 0x9077508B); /*GrindRelease*/
+		params->AddChecksum(0xA7E24442, 0xCF3C89F7); /*GrindBail, Airborne*/
+		params->AddInteger(0x1878C644, -5); /*MoveRight*/
+		params->AddInteger(0x5A151ED3, 5); /*MoveY*/
+
+		grindrelease->AddStructure(0xE594F0A2, trigger); /*Trigger*/
+		grindrelease->AddChecksum(0xA6D2D890, 0x90E528CA); /*Scr, SkateOrInBail*/
+		grindrelease->AddStructure(0x7031F10C, params); /*params*/
+
+		Script::LazyArray* pref_dropdown = GlobalGetArray_Native(0x9077508B, 0, grindrelease); /*GrindRelease*/
+		pref_dropdown->SetInteger(0, (int)grindrelease);
+	}
+}
+
 void patchScripts()
 {
 	/* First, get config from INI. struct defined in config.h */
 	getScriptSettings(&mScriptsettings);
-
-	patchDWord((void*)0x0068146C, (uint32_t)&CFunc_IsPS2_Patched); /* returns true for the neversoft test skater */
+	patchJump((void*)0x005A5B32, initScriptPatch);
+	patchDWord((void*)0x0068146C, (uint32_t)&IsPS2_Patched); /* returns true for the neversoft test skater */
 	patchDWord((void*)0x0067F7D4, (uint32_t)&GetMemCardSpaceAvailable_Patched);
-	patchDWord((void*)0x00680C6C, (uint32_t)&ScriptCreateScreenElementWrapper); /* adjusts scale and position of main menu screen elements in widescreen */
-	patchDWord((void*)0x00680C84, (uint32_t)&ScriptSetScreenElementPropsWrapper);
+	patchDWord((void*)0x00680C6C, (uint32_t)&CreateScreenElement_Wrapper); /* adjusts scale and position of main menu screen elements in widescreen */
+	patchDWord((void*)0x00680C84, (uint32_t)&SetScreenElementProps_Wrapper);
 	patchCall((void*)0x00474F25, LookUpSymbol_Patched); /* accesses the global hash map */
-	
+
 	printf("Initializing CFuncs\n");
 
 	//TEST
@@ -328,5 +402,5 @@ void patchScripts()
 	//uint32_t bb = 0xDEADBEEF;
 	//printf("0x%08x\n", bb);
 
-	patchJump((void*)0x005A5B32, loadScripts); /* loads single functions of scripts and overwrites existing ones */
+	//patchJump((void*)0x005480A0, loadScripts); /* loads single functions of scripts and overwrites existing ones */
 }

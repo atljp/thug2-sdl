@@ -134,6 +134,7 @@ struct scriptsettings {
 	uint8_t airdrift;
 	uint8_t suninnetgame;
 	uint8_t boardscuffs;
+	uint8_t dropdowncontrol;
 };
 
 struct flashVertex {

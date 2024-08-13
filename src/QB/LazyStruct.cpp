@@ -225,7 +225,7 @@ namespace Script {
 	}
 
 	//---------------------------------------
-	// Set integer
+	// Add integer
 	//---------------------------------------
 
 	typedef void (__thiscall* AddInteger_NativeCall)(LazyStruct* struc, uint32_t checksum, uint32_t value);
@@ -235,7 +235,7 @@ namespace Script {
 	{
 		AddInteger_Native(this, checksum, value);
 	}
-
+	
 	//---------------------------------------
 	// Add float
 	//---------------------------------------
@@ -313,13 +313,12 @@ namespace Script {
 	// Get array item
 	//---------------------------------------
 
-	void* LazyStruct::GetArray(uint32_t qbKey)
-	{
-		LazyStructItem* item = GetItem(qbKey);
-		if (!item)
-			return nullptr;
+	typedef Script::LazyArray* (__thiscall* GetArray_NativeCall)(LazyStruct* struc, uint32_t nameChecksum, uint32_t checksum, const Script::LazyStruct* p_array);
+	GetArray_NativeCall GetArray_Native = (GetArray_NativeCall)(0x00479070);
 
-		return (void*)item->value;
+	Script::LazyArray* LazyStruct::GetArray(uint32_t nameChecksum, uint32_t checksum, const Script::LazyStruct* p_array)
+	{
+		return GetArray_Native(this, nameChecksum, checksum, p_array);
 	}
 
 	//---------------------------------------
