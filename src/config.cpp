@@ -120,14 +120,14 @@ void initPatch() {
 	Log::TypedLog(CHN_DLL, "Airdrift: %s\n", airdrift ? "Enabled" : "Disabled");
 
 	/* Drop Down Control */
-	printf("DDCONTROL: %d\n", dropdowncontrol);
 	switch (dropdowncontrol) {
-		case 0: Log::TypedLog(CHN_DLL, "DropDownControl: L2+R2 (PC default)\n"); break;
-		case 1: Log::TypedLog(CHN_DLL, "DropDownControl: L1\n"); break;
-		case 2: Log::TypedLog(CHN_DLL, "DropDownControl: R1\n"); break;
-		case 3: Log::TypedLog(CHN_DLL, "DropDownControl: L2\n"); break;
-		case 4: Log::TypedLog(CHN_DLL, "DropDownControl: R2\n"); break;
+		case 1: Log::TypedLog(CHN_DLL, "DropDownControl: L2+R2 (PC default)\n"); break;
+		case 2: Log::TypedLog(CHN_DLL, "DropDownControl: L1\n"); break;
+		case 3: Log::TypedLog(CHN_DLL, "DropDownControl: R1\n"); break;
+		case 4: Log::TypedLog(CHN_DLL, "DropDownControl: L2\n"); break;
+		case 5: Log::TypedLog(CHN_DLL, "DropDownControl: R2\n"); break;
 	}
+
 	/* Set spindelay. Off is Ps2 default, on is PC default (value = 100) */
 	if (!spindelay) {
 		patchNop((void*)ADDR_SpinLagL, 2);
@@ -397,7 +397,7 @@ float getaspectratio() {
 }
 
 /* called from patchScripts */
-void getScriptSettings(struct scriptsettings* scriptsettingsOut) {
+void loadScriptSettings(struct scriptsettings* scriptsettingsOut) {
 	if (scriptsettingsOut) {
 		scriptsettingsOut->airdrift = airdrift;
 		scriptsettingsOut->suninnetgame = suninnetgame;

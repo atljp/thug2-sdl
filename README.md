@@ -14,7 +14,7 @@ This mod is still under development!
 - Option to disable intro movies
 - Blur fix
 - Selectable languages (English, French, German)
-- Selectable button fonts (Keyboard, Ps2, Xbox or Ngc)
+- Selectable button fonts (PC, Ps2, Xbox or Ngc)
 - Stability fixes (e.g. for level merging)
 - Fixed RNG
 - THUG Airdrift

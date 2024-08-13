@@ -162,7 +162,7 @@ void patchWindow();
 void patch_button_font(uint8_t sel);
 float getScreenAngleFactor();
 float getaspectratio();
-void getScriptSettings(struct scriptsettings* scriptsettingsOut);
+void loadScriptSettings(struct scriptsettings* scriptsettingsOut);
 void getConfigFilePath(char mConfigFile[MAX_PATH]);
 void loadKeyBinds(struct keybinds* bindsOut);
 void loadControllerBinds(struct controllerbinds* bindsOut);

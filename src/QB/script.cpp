@@ -5,6 +5,7 @@
 #include "malloc.h"
 
 struct scriptsettings mScriptsettings;
+struct inputsettings mInputsettings;
 uint32_t sCreateScriptSymbol = 0x0046FE40; /* called in sCreateScriptSymbol wrapper */
 bool walkspinpatched = false;
 bool boardscuffpatched = false;
@@ -340,32 +341,59 @@ void setDropDownKeys()
 		Script::LazyStruct* trigger = Script::LazyStruct::s_create();
 		Script::LazyStruct* params = Script::LazyStruct::s_create();
 
-		printf("received ddcontrol: %d\n", mScriptsettings.dropdowncontrol);
+		if (mInputsettings.isPs2Controls)
+		{
+			if (mScriptsettings.dropdowncontrol == 2)
+			{
+				/*Set L1*/
+				trigger->AddChecksum(0, 0x823B8342); /*press*/
+				trigger->AddChecksum(0, 0x26B0C991); /*L1*/
+			}
+			else if (mScriptsettings.dropdowncontrol == 3)
+			{
+				/*Set R1*/
+				trigger->AddChecksum(0, 0x823B8342); /*press*/
+				trigger->AddChecksum(0, 0xF2F1F64E); /*R1*/
+			}
+			else if (mScriptsettings.dropdowncontrol == 4)
+			{
+				/*Set L2*/
+				trigger->AddChecksum(0, 0x823B8342); /*press*/
+				trigger->AddChecksum(0, 0xBFB9982B); /*L2*/
+			}
+			else if (mScriptsettings.dropdowncontrol == 5)
+			{
+				/*Set R2*/
+				trigger->AddChecksum(0, 0x823B8342); /*press*/
+				trigger->AddChecksum(0, 0x6BF8A7F4); /*R2*/
+			}
 
-		if (mScriptsettings.dropdowncontrol == 2) // black and white
-		{
-			/*Set L1*/
-			trigger->AddChecksum(0, 0x823B8342); /*press*/
-			trigger->AddChecksum(0, 0x767A45D7); /*black*/
-			printf("L1\n");
 		}
-		else if (mScriptsettings.dropdowncontrol == 3)
-		{
-			/*Set R1*/
-			trigger->AddChecksum(0, 0x823B8342); /*press*/
-			trigger->AddChecksum(0, 0xBD30325B); /*white*/
-		}
-		else if (mScriptsettings.dropdowncontrol == 4)
-		{
-			/*Set L2*/
-			trigger->AddChecksum(0, 0x823B8342); /*press*/
-			trigger->AddChecksum(0, 0xBFB9982B); /*L2*/
-		}
-		else if (mScriptsettings.dropdowncontrol == 5)
-		{
-			/*Set R2*/
-			trigger->AddChecksum(0, 0x823B8342); /*press*/
-			trigger->AddChecksum(0, 0x6BF8A7F4); /*R2*/
+		else {
+			if (mScriptsettings.dropdowncontrol == 2)
+			{
+				/*Set L1*/
+				trigger->AddChecksum(0, 0x823B8342); /*press*/
+				trigger->AddChecksum(0, 0x767A45D7); /*black*/
+			}
+			else if (mScriptsettings.dropdowncontrol == 3)
+			{
+				/*Set R1*/
+				trigger->AddChecksum(0, 0x823B8342); /*press*/
+				trigger->AddChecksum(0, 0xBD30325B); /*white*/
+			}
+			else if (mScriptsettings.dropdowncontrol == 4)
+			{
+				/*Set L2*/
+				trigger->AddChecksum(0, 0x823B8342); /*press*/
+				trigger->AddChecksum(0, 0xBFB9982B); /*L2*/
+			}
+			else if (mScriptsettings.dropdowncontrol == 5)
+			{
+				/*Set R2*/
+				trigger->AddChecksum(0, 0x823B8342); /*press*/
+				trigger->AddChecksum(0, 0x6BF8A7F4); /*R2*/
+			}
 		}
 
 		trigger->AddInteger(0, 100);
@@ -387,7 +415,8 @@ void setDropDownKeys()
 void patchScripts()
 {
 	/* First, get config from INI. struct defined in config.h */
-	getScriptSettings(&mScriptsettings);
+	loadScriptSettings(&mScriptsettings);
+	loadInputSettings(&mInputsettings);
 	patchJump((void*)0x005A5B32, initScriptPatch);
 	patchDWord((void*)0x0068146C, (uint32_t)&IsPS2_Patched); /* returns true for the neversoft test skater */
 	patchDWord((void*)0x0067F7D4, (uint32_t)&GetMemCardSpaceAvailable_Patched);
@@ -400,7 +429,8 @@ void patchScripts()
 	//TEST
 	//patchCall((void*)0x0046EEA3, ParseQB_Patched); /* loads script files */
 	//uint32_t bb = 0xDEADBEEF;
-	//printf("0x%08x\n", bb);
+	uint32_t bb = GenerateCRCFromString_Native("white");
+	printf("0x%08x\n", bb);
 
 	//patchJump((void*)0x005480A0, loadScripts); /* loads single functions of scripts and overwrites existing ones */
 }
