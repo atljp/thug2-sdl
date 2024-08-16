@@ -20,18 +20,17 @@ This mod is still under development!
 - THUG Airdrift
 - Online play
 - Unlimited three-axes scaling in Create-A-Skater
+- Adjustable Drop down key(s)
 - Improved graphics (shadows and edges are slightly sharper, most noticeably on high resolutions)
 - Fixed graphical bug during screen flashes (e.g. Frankling Grind)
 
 ## TODO
 
-- Adjustable Drop down key(s)
 - Change GameSpy to OpenSpy
 - Fix menu controls
 - Console text logging to file (append / overwrite)
 - Error manager with crash reports
 - Improve CFunction handling, functions to append CFunc table
-- Create-A-Skater board scaling
 - Move / resize borderless window without locking the thread
 - Textinput for more keyboard layouts: FR, UK, GER, RUS (new font?)
 - Main menu 21:9 and 21:10 aspect ratio support

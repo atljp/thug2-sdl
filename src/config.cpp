@@ -75,8 +75,7 @@ void initPatch() {
 	if (console) {
 		Log::Initialize();
 		patchDWord((void*)0x0067F3D4, (uint32_t)&Log::CFunc_PrintF);
-		if (console == 2)
-			patchJump((void*)0x00401C30, &Log::PrintLog);
+		if (console == 2) { patchJump((void*)0x00401C30, &Log::PrintLog); }
 	}
 	Log::TypedLog(CHN_DLL, "PARTYMOD for THUG2 %d.%d\n", VERSION_NUMBER_MAJOR, VERSION_NUMBER_MINOR);
 	Log::TypedLog(CHN_DLL, "DIRECTORY: %s\n", (LPSTR)executableDirectory);
@@ -95,7 +94,7 @@ void initPatch() {
 	else
 		patchByte((void*)ADDR_LanguageFlag, 1);
 
-	patchByte((void*)(ADDR_LanguageFlag + 0x8), 0x07);	//Load and save savegames from multiple language settings
+	patchByte((void*)(ADDR_LanguageFlag + 0x8), 0x07);	//Load and save savegames across different language settings
 	patchByte((void*)(ADDR_LanguageFlag + 0xC), 0x01);
 	Log::TypedLog(CHN_DLL, "Loading language setting: %s\n", (language == 1) ? "English" : ((language == 2) ? "French" : ((language == 3) ? "German" : "English")));
 
@@ -118,6 +117,9 @@ void initPatch() {
 		/* Walkspin is disabled in script.cpp */
 	}
 	Log::TypedLog(CHN_DLL, "Airdrift: %s\n", airdrift ? "Enabled" : "Disabled");
+
+	/* Ps2Controls */
+	Log::TypedLog(CHN_DLL, "Ps2Controls: %s\n", Ps2Controls ? "Enabled" : "Disabled");
 
 	/* Drop Down Control */
 	switch (dropdowncontrol) {
@@ -220,7 +222,6 @@ void patchStaticValues() {
 	patchByte((void*)0x005F95BB, 0xEB);
 
 	/* MOTD patch: http://www.thugonline.com/motd.txt */
-
 	patchBytesM((void*)0x0064CD97, (BYTE*)"\x74\x68\x75\x67\x6F\x6E\x6C\x69\x6E\x65\x2E\x63\x6F\x6D\x2F\x6D\x6F\x74\x64\x2E\x74\x78\x74", 23);
 
 	/* Patch fixed RNG */
@@ -229,8 +230,6 @@ void patchStaticValues() {
 	patchCall((void*)0x004523B4, &Rnd_fixed);
 	patchCall((void*)0x004523F6, &Rnd_fixed);
 }
-
-
 
 void __fastcall reorderFlashVertices(void* unused, uint32_t* d3dDevice, void* alsodevice, uint32_t prim, uint32_t count, struct flashVertex* vertices, uint32_t stride) {
 
@@ -263,8 +262,6 @@ void patchWindow() {
 	patchNop((void*)0x004B91E7, 6);
 	patchCall((void*)0x004B91E7, reorderFlashVertices);
 }
-
-
 
 void enforceMaxResolution() {
 	defWidth = GetSystemMetrics(SM_CXSCREEN);	/* The width of the screen of the primary display monitor, in pixels.  */
@@ -322,7 +319,7 @@ void createSDLWindow() {
 		Log::TypedLog(CHN_DLL, "Setting resolution: %d x %d\n", resX, resY);
 	}
 
-	Log::TypedLog(CHN_DLL, "Aspect ratio:%f\n", getaspectratio());
+	Log::TypedLog(CHN_DLL, "Aspect ratio: %f\n", getaspectratio());
 
 	window = SDL_CreateWindow("THUG2 PARTYMOD", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, resX, resY, flags);   // TODO: move / resize borderless window
 	SDL_SetWindowResizable(window, SDL_TRUE);

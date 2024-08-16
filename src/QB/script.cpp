@@ -9,7 +9,6 @@ struct inputsettings mInputsettings;
 uint32_t sCreateScriptSymbol = 0x0046FE40; /* called in sCreateScriptSymbol wrapper */
 bool walkspinpatched = false;
 bool boardscuffpatched = false;
-bool a = false;
 
 struct DummyScript
 {
@@ -71,44 +70,70 @@ ExecuteCFuncPointer_NativeCall* ExecuteCFuncPointer_Native = (ExecuteCFuncPointe
 typedef Script::LazyArray* __cdecl GlobalGetArray_NativeCall(uint32_t nameChecksum, uint32_t checksum, const Script::LazyStruct* p_struct);
 GlobalGetArray_NativeCall* GlobalGetArray_Native = (GlobalGetArray_NativeCall*)(0x00479070);
 
+typedef void(__thiscall* LoadTextureFromBuffer_NativeCall)(int sp_sprite_tex_dict, uint8_t* p_buffer, uint32_t buffer_size, uint32_t texture_checksum, bool sprite, bool alloc_vram, bool perm, bool unk4);
+LoadTextureFromBuffer_NativeCall LoadTextureFromBuffer_Native = (LoadTextureFromBuffer_NativeCall)(0x0049FA20);
+
+typedef bool __cdecl ProfileLoggedIn_NativeCall(Script::LazyStruct* pParams, DummyScript* pScript);
+ProfileLoggedIn_NativeCall* ProfileLoggedIn_Native = (ProfileLoggedIn_NativeCall*)(0x00548360);
+ 
+
 /* -=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=- */
 /* -=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Patched CFuncs =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= */
 /* -=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=- */
 
 bool IsPS2_Patched(void* pParams, DummyScript* pScript)
 {
-	if (pScript->mScriptNameChecksum == 0x6AEC78DA)
+	if (pScript->mScriptNameChecksum == 0x6AEC78DA) /*check_for_neversoft_skaters*/
 		return true;
 	return false;
 }
 
-bool GetMemCardSpaceAvailable_Patched(Script::LazyStruct* pParams, /* ebp + 0x8 */
-									DummyScript* pScript, /* ebp+0xC */
-									uint32_t a, /* ebp+0x10 */
-									ULARGE_INTEGER b, /* ebp+0x14 */
-									ULARGE_INTEGER c, /* ebp+0x1C */
-									ULARGE_INTEGER d, /* ebp+0x24 */
-									ULARGE_INTEGER e, /* ebp+0x2C */
-									ULARGE_INTEGER f, /* epc+0x34 */
-									uint8_t p_card) { /* ebp+0x3C */
+bool IsXBOX_Patched(void* pParams, DummyScript* pScript)
+{
+	if (pScript->mScriptNameChecksum == 0x98B57854) /*load_ps2_textures_to_main_memory*/
+	{
+		Script::LazyStruct* sprite_struct = Script::LazyStruct::s_create();
+		if (sprite_struct)
+		{
+			sprite_struct->AddChecksum(0, 0x0B1BA9DE); /*permanenttextureheap*/
+			RunScript(0xEB117FD0 /*MemPushContext*/, sprite_struct, nullptr, nullptr);
+			LoadTextureFromBuffer_Native(*(int*)0x00700F1C, (uint8_t*)oslogo, 0x4000, 0x2074BEAE /*gslogo*/, true, true, true, true);
+			RunScript(0x3417C307 /*MemPopContext*/, nullptr, nullptr, nullptr);
+			sprite_struct->Clear();
+			FreeQBStruct(sprite_struct);
+			return false;
+		}
+	}
+	return true;
+}
+
+bool GetMemCardSpaceAvailable_Patched(Script::LazyStruct* pParams, /*ebp + 0x8*/
+									DummyScript* pScript, /*ebp+0xC*/
+									uint32_t a, /*ebp+0x10*/
+									ULARGE_INTEGER b, /*ebp+0x14*/
+									ULARGE_INTEGER c, /*ebp+0x1C*/
+									ULARGE_INTEGER d, /*ebp+0x24*/
+									ULARGE_INTEGER e, /*ebp+0x2C*/
+									ULARGE_INTEGER f, /*epc+0x34*/
+									uint8_t p_card) { /*ebp+0x3C*/
 
 	ULARGE_INTEGER mlpFreeBytesAvailableToCaller = {};
 	ULARGE_INTEGER mlpTotalNumberOfBytes = {};
-	uint32_t space_available = (INT_MAX - (UINT16_MAX * 2)); /* stdint.h */
+	uint32_t space_available = (INT_MAX - (UINT16_MAX * 2)); /*stdint.h*/
 	uint32_t space_available_result = 0;
 	uint32_t GetNumFreeClusters_Result = 0;
 
-	pScript->GetParams->AddInteger(0x855b2FC, 1000000); /* FilesLeft */
+	pScript->GetParams->AddInteger(0x855b2FC, 1000000); /*FilesLeft*/
 
 	if (p_card && GetDiskFreeSpaceExA(NULL, &mlpFreeBytesAvailableToCaller, &mlpTotalNumberOfBytes, NULL)) {
 		space_available_result = ((mlpFreeBytesAvailableToCaller.HighPart << 0x16) + (mlpFreeBytesAvailableToCaller.LowPart >> 0xA));
 		if (space_available_result <= space_available)
 			space_available = space_available_result;
 	}
-	pScript->GetParams->AddInteger(0xC37C363, space_available); /* SpaceAvailable */
+	pScript->GetParams->AddInteger(0xC37C363, space_available); /*SpaceAvailable*/
 	return true;
 
-	/* GetMemCardSpaceAvailable_Native(pParams, pScript); */
+	/*GetMemCardSpaceAvailable_Native(pParams, pScript);*/
 }
 
 bool CreateScreenElement_Wrapper(Script::LazyStruct* pParams, DummyScript* pScript)
@@ -116,123 +141,142 @@ bool CreateScreenElement_Wrapper(Script::LazyStruct* pParams, DummyScript* pScri
 	SkateInstance* Skate = (SkateInstance*)*(uint32_t*)(0x007CE478);
 	uint32_t p_checksum = 0;
 	uint32_t p_checksum2 = 0;
-	/* float values are processed according to the IEEE - 754 specification */
 
-	if (Skate->level == 0xE92ECAFE && getaspectratio() > 1.34f) { /* level: load_mainmenu */
+	if (Skate->level == 0xE92ECAFE && getaspectratio() > 1.34f) { /*level: load_mainmenu*/
 
-		if (pScript->mScriptNameChecksum == 0x7C92D11A) {  /* script: make_mainmenu_3d_plane */
+		if (pScript->mScriptNameChecksum == 0x7C92D11A) {  /*script: make_mainmenu_3d_plane*/
 
-			pParams->GetChecksum(0x40C698AF, &p_checksum, false);  /* id */
+			pParams->GetChecksum(0x40C698AF, &p_checksum, false);  /*id*/
 
-			if (p_checksum == 0xBC4B9584) /* bg_plane */
-				pParams->AddInteger(0xED7C6031, 0xFFFFFEE7); /* cameraz */
+			if (p_checksum == 0xBC4B9584) /*bg_plane*/
+				pParams->AddInteger(0xED7C6031, -281); /*cameraz*/
 		}
-		else if (pScript->mScriptNameChecksum == 0xAD62B0B3) { /* script: build_roundbar */
+		else if (pScript->mScriptNameChecksum == 0xAD62B0B3) { /*script: build_roundbar*/
 
-			pParams->GetChecksum(0x7321A8D6, &p_checksum, false); /* type */
-			pParams->GetChecksum(0x40C698AF, &p_checksum2, false); /* id */
+			pParams->GetChecksum(0x7321A8D6, &p_checksum, false); /*type*/
+			pParams->GetChecksum(0x40C698AF, &p_checksum2, false); /*id*/
 
-			if (p_checksum == 0x5B9DA842 /* containerelement */ && p_checksum2 == 0x1954867E /* roundbar_bar */) {
+			if (p_checksum == 0x5B9DA842 /*containerelement*/ && p_checksum2 == 0x1954867E /*roundbar_bar*/) {
 				if (getaspectratio() > 1.6f) {
-					pParams->AddFloat(0x13B9DA7B, 0.80f); /* scale */
-					pParams->AddPair(0x7F261953, 157.0f, 213.0f); /* pos */
+					pParams->AddFloat(0x13B9DA7B, 0.80f); /*scale*/
+					pParams->AddPair(0x7F261953, 157.0f, 213.0f); /*pos*/
 				}
 				else {
-					pParams->AddFloat(0x13B9DA7B, 0.88f); /* scale */
-					pParams->AddPair(0x7F261953, 142.0f, 212.0f); /* pos */
+					pParams->AddFloat(0x13B9DA7B, 0.88f); /*scale*/
+					pParams->AddPair(0x7F261953, 142.0f, 212.0f); /*pos*/
 				}
 			}
 		}
-		else if (pScript->mScriptNameChecksum == 0x59F6E121) { /* script: make_spin_menu */
+		else if (pScript->mScriptNameChecksum == 0x59F6E121) { /*script: make_spin_menu*/
 
-			pParams->GetChecksum(0x7321A8D6, &p_checksum, false); /* type */
-			pParams->GetChecksum(0x40C698AF, &p_checksum2, false); /* id */
+			pParams->GetChecksum(0x7321A8D6, &p_checksum, false); /*type*/
+			pParams->GetChecksum(0x40C698AF, &p_checksum2, false); /*id*/
 
-			if (p_checksum == 0x130EF802 /* vmenu */ && p_checksum2 == 0xB0524B44 /* main_vmenu */) {
+			if (p_checksum == 0x130EF802 /* vmenu */ && p_checksum2 == 0xB0524B44 /*main_vmenu*/) {
 				if (getaspectratio() > 1.6f) {
-					pParams->AddPair(0x7F261953, 116.0f, 214.0f); /* pos */
-					pParams->AddFloat(0x13B9DA7B, 0.72f); /* scale */
+					pParams->AddPair(0x7F261953, 116.0f, 214.0f); /*pos*/
+					pParams->AddFloat(0x13B9DA7B, 0.72f); /*scale*/
 				}
 				else {
-					pParams->AddPair(0x7F261953, 95.0f, 213.0f); /* pos */
-					pParams->AddFloat(0x13B9DA7B, 0.82f); /* scale */
+					pParams->AddPair(0x7F261953, 95.0f, 213.0f); /*pos*/
+					pParams->AddFloat(0x13B9DA7B, 0.82f); /*scale*/
 				}
 			}
 		}
 	}
-	/* call CreateScreenElement with the received parameters */
+	/*call CreateScreenElement with the received parameters*/
 	return CreateScreenElement_Native(pParams, pScript);
 }
 
-bool SetScreenElementProps_Wrapper(Script::LazyStruct* pParams, DummyScript* pScript)
+BOOL SetScreenElementProps_Wrapper(Script::LazyStruct* pParams, DummyScript* pScript)
 {
 	SkateInstance* Skate = (SkateInstance*)*(uint32_t*)(0x007CE478);
 	uint32_t p_checksum = 0;
-	bool done = FALSE;
+	BOOL done = FALSE;
 
-	if (Skate->level == 0xE92ECAFE) { /* level: load_mainmenu */
+	if (Skate->level == 0xE92ECAFE) { /*load_mainmenu*/
 
-		if (pScript->mScriptNameChecksum == 0xE2873769) { /* script: create_cas_modifier_menu */
+		if (pScript->mScriptNameChecksum == 0xE2873769) { /*script: create_cas_modifier_menu*/
 
-			Script::LazyStruct* cas_menu_struct = Script::LazyStruct::s_create();
-			cas_menu_struct->AddChecksum(0, 0xB94B715A); /* add_scaling */
-			if (ExecuteCFuncPointer_Native(cas_menu_struct, pScript))
+			Script::LazyStruct* cas_menu = Script::LazyStruct::s_create();
+			cas_menu->AddChecksum(0, 0xB94B715A); /*add_scaling*/
+			if (ExecuteCFuncPointer_Native(cas_menu, pScript))
 			{
 				if (!done)
 				{
+					/*
+					exit_board_scaling = [ event_handlers = { 
+					id = mod_vmenu
+					pad_back
+					showboardmyan
+					params = { turn_off } } ]
+					*/
+
 					done = TRUE;
-					bool x = SetScreenElementProps_Native(pParams, pScript);
-					RunScript(0x36150445, pScript->GetParams, nullptr, nullptr); /* showboardmyan */
-					cas_menu_struct->Clear();
+					BOOL native_val = SetScreenElementProps_Native(pParams, pScript);
+					RunScript(0x36150445, pScript->GetParams, nullptr, nullptr); /*showboardmyan*/
+					cas_menu->Clear();
 
-					Script::LazyStruct* a = Script::LazyStruct::s_create();
-					Script::LazyStruct* b = Script::LazyStruct::s_create();
+					Script::LazyStruct* event_handlers = Script::LazyStruct::s_create();
+					Script::LazyStruct* params = Script::LazyStruct::s_create();
 
-					cas_menu_struct->AddChecksum(0x40C698AF, 0x15E31D81); /* id, mod_vmenu */
-					a->AddChecksum(0, 0x7EE0FD2A); /* pad_back */
-					a->AddChecksum(0, 0x36150445); /* showboardmyan */
-					b->AddChecksum(0, 0x2BECBE33); /* turn_off */
-					a->AddStructure(0x7031F10C, b); /* params */
-					//new lazyarray
-					Script::LazyArray* testarray = Script::LazyArray::s_create();
-					testarray->SetSizeAndType(1, ESYMBOLTYPE_INTEGER);
-					testarray->SetInteger(0, (int)a);
-					cas_menu_struct->AddArray(0x475BF03C, testarray); /* event_handlers */
-					SetScreenElementProps_Native(cas_menu_struct, pScript);
+					cas_menu->AddChecksum(0x40C698AF, 0x15E31D81); /*id, mod_vmenu*/
+					event_handlers->AddChecksum(0, 0x7EE0FD2A); /*pad_back*/
+					event_handlers->AddChecksum(0, 0x36150445); /*showboardmyan*/
+					params->AddChecksum(0, 0x2BECBE33); /*turn_off*/
+					event_handlers->AddStructure(0x7031F10C, params); /*params*/
 
-					/* clean up allocated space */
-					if (b) {
-						b->Clear();
-						FreeQBStruct(b);
+					Script::LazyArray* exit_board_scaling = Script::LazyArray::s_create();
+					exit_board_scaling->SetSizeAndType(1, ESYMBOLTYPE_INTEGER);
+					exit_board_scaling->SetStructure(0, event_handlers);
+					cas_menu->AddArray(0x475BF03C, exit_board_scaling); /*event_handlers*/
+					SetScreenElementProps_Native(cas_menu, pScript);
+
+					/*clean up allocated space*/
+					if (params) {
+						params->Clear();
+						FreeQBStruct(params);
 					}
-					if (a) {
-						a->Clear();
-						FreeQBStruct(a);
+					if (event_handlers) {
+						event_handlers->Clear();
+						FreeQBStruct(event_handlers);
 					}
-					if (testarray) {
-						testarray->Clear();
-						FreeQBArray(testarray);
+					if (exit_board_scaling) {
+						exit_board_scaling->Clear();
+						FreeQBArray(exit_board_scaling);
 					}
-					if (cas_menu_struct) {
-						cas_menu_struct->Clear();
-						FreeQBStruct(cas_menu_struct);
-						return x;
+					if (cas_menu) {
+						cas_menu->Clear();
+						FreeQBStruct(cas_menu);
+						return native_val;
 					}
 				}
 			}
 		}
-		else if (pScript->mScriptNameChecksum == 0x1B95F333) /* script: create_scale_options_menu */
+		else if (pScript->mScriptNameChecksum == 0x1B95F333) /*script: create_scale_options_menu*/
 		{
-			pParams->GetChecksum(0x40C698AF, &p_checksum, false); /* id */
+			pParams->GetChecksum(0x40C698AF, &p_checksum, false); /*id*/
 
-			if (p_checksum == 0x5E430716) /* scaling_vmenu */
+			if (p_checksum == 0x5E430716) /*scaling_vmenu*/
 			{
-				removeScript(0xD2BE4CAF); /* skateshop_scaling_options */
-				sCreateSymbolOfTheFormNameEqualsValue_Native((uint8_t*)skateshop_scaling_options_new, 0xD2BE4CAF, "scripts\\myan.qb"); /* data must not contain newlines but must end with one (token 0x01). returns pointer to last newline token */
+				removeScript(0xD2BE4CAF); /*skateshop_scaling_options*/
+				sCreateSymbolOfTheFormNameEqualsValue_Native((uint8_t*)skateshop_scaling_options_new, 0xD2BE4CAF, "scripts\\myan.qb"); /*data must not contain newlines but must end with one (token 0x01). returns pointer to last newline token*/
 			}
 		}
 	}
-	/* scripts/mainmenu/levels/mainmenu/scalingmenu.txt*/
+	else if (pScript->mScriptNameChecksum == 0xB9ED9B74) /*script: create_internet_options*/
+	{
+		pParams->GetChecksum(0x40C698AF, &p_checksum, false); /*id*/
+		if (p_checksum == 0x455A37D3) /*menu_create_profile*/
+		{
+			if (ProfileLoggedIn_Native(pParams, pScript))
+			{
+				//100061b9
+			}
+		}
+	}
+
+	/*scripts/mainmenu/levels/mainmenu/scalingmenu.txt*/
 	return SetScreenElementProps_Native(pParams, pScript);
 }
 
@@ -242,8 +286,8 @@ bool SetScreenElementProps_Wrapper(Script::LazyStruct* pParams, DummyScript* pSc
 
 void initScriptPatch()
 {
-	setDropDownKeys();
-	loadScripts();
+	setDropDownKeys(); /*sets up GrindRelease array to define different rail dropdown keys*/
+	loadScripts(); /*loads single functions of scripts and overwrites existing ones*/
 }
 
 void LookUpSymbol_Patched(uint32_t checksum)
@@ -257,7 +301,7 @@ void LookUpSymbol_Patched(uint32_t checksum)
 		boardscuffpatched = true;
 	}
 	if (walkspinpatched && boardscuffpatched)
-		patchBytesM((void*)0x00474F25, (BYTE*)"\xE8\xC6\x3D\x00\x00", 5); /* unhook */
+		patchBytesM((void*)0x00474F25, (BYTE*)"\xE8\xC6\x3D\x00\x00", 5); /*unhook*/
 
 	CSymbolTableEntryResolve_Native(checksum);
 }
@@ -408,7 +452,7 @@ void setDropDownKeys()
 		grindrelease->AddStructure(0x7031F10C, params); /*params*/
 
 		Script::LazyArray* pref_dropdown = GlobalGetArray_Native(0x9077508B, 0, grindrelease); /*GrindRelease*/
-		pref_dropdown->SetInteger(0, (int)grindrelease);
+		pref_dropdown->SetStructure(0, grindrelease);
 	}
 }
 
@@ -417,20 +461,23 @@ void patchScripts()
 	/* First, get config from INI. struct defined in config.h */
 	loadScriptSettings(&mScriptsettings);
 	loadInputSettings(&mInputsettings);
+
 	patchJump((void*)0x005A5B32, initScriptPatch);
-	patchDWord((void*)0x0068146C, (uint32_t)&IsPS2_Patched); /* returns true for the neversoft test skater */
-	patchDWord((void*)0x0067F7D4, (uint32_t)&GetMemCardSpaceAvailable_Patched);
-	patchDWord((void*)0x00680C6C, (uint32_t)&CreateScreenElement_Wrapper); /* adjusts scale and position of main menu screen elements in widescreen */
-	patchDWord((void*)0x00680C84, (uint32_t)&SetScreenElementProps_Wrapper);
 	patchCall((void*)0x00474F25, LookUpSymbol_Patched); /* accesses the global hash map */
 
-	printf("Initializing CFuncs\n");
+	/*patch CFuncs*/
+	patchDWord((void*)0x0068146C, (uint32_t)&IsPS2_Patched); /* returns true for the neversoft test skater */
+	patchDWord((void*)0x0068147C, (uint32_t)&IsXBOX_Patched); /* load OpenSpy logo */
+	patchDWord((void*)0x0067F7D4, (uint32_t)&GetMemCardSpaceAvailable_Patched);
+	patchDWord((void*)0x00680C6C, (uint32_t)&CreateScreenElement_Wrapper); /* adjusts scale and position of main menu screen elements in widescreen */
+	patchDWord((void*)0x00680C84, (uint32_t)&SetScreenElementProps_Wrapper); /* add unlimited three-axes scaling and board scaling to C-A-S */
+	
+	Log::TypedLog(CHN_DLL, "Initializing CFuncs\n");
 
 	//TEST
 	//patchCall((void*)0x0046EEA3, ParseQB_Patched); /* loads script files */
 	//uint32_t bb = 0xDEADBEEF;
-	uint32_t bb = GenerateCRCFromString_Native("white");
-	printf("0x%08x\n", bb);
-
-	//patchJump((void*)0x005480A0, loadScripts); /* loads single functions of scripts and overwrites existing ones */
+	//uint32_t bb = GenerateCRCFromString_Native("white");
+	//printf("0x%08x\n", bb);
 }
+

@@ -228,10 +228,10 @@ namespace Script {
 	// Add integer
 	//---------------------------------------
 
-	typedef void (__thiscall* AddInteger_NativeCall)(LazyStruct* struc, uint32_t checksum, uint32_t value);
+	typedef void (__thiscall* AddInteger_NativeCall)(LazyStruct* struc, uint32_t checksum, int value);
 	AddInteger_NativeCall AddInteger_Native = (AddInteger_NativeCall)(0x00477B80); //Thug2 address
 
-	void LazyStruct::AddInteger(uint32_t checksum, uint32_t value)
+	void LazyStruct::AddInteger(uint32_t checksum, int value)
 	{
 		AddInteger_Native(this, checksum, value);
 	}

@@ -1219,9 +1219,9 @@ uint32_t convert_SDL_to_OIS_keycode(uint8_t sdlKeyCode) {
 }
 
 void __stdcall initManager() {
-	printf("Initializing Manager!\n");
-	printf("Locale: %s\n", locale->language);
-	printf("Language: %d\n", language);
+	//printf("Initializing Manager!\n");
+	//printf("Locale: %s\n", locale->language);
+	//printf("Language: %d\n", language);
 
 
 	GetModuleFileName(NULL, (LPSTR)&executableDirectory3, MAX_PATH);
@@ -1258,11 +1258,11 @@ void __stdcall initManager() {
 	initSDLControllers();
 
 	if (inputsettings.isPs2Controls) {
-		printf("PS2 Controls enabled\n");
+		//printf("PS2 Controls enabled\n");
 		patchPs2Buttons();
 	}
-	else
-		printf("PS2 Controls disabled\n");
+	//else
+		//printf("PS2 Controls disabled\n");
 	
 	// Add missing key info: Since we don't use the launcher, no registry values for our keybinds are set.
 	// The game normally loads keybinds found in the registry and stores them at these addresses (starting at 0x007D6794).

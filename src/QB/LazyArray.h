@@ -69,8 +69,7 @@ namespace Script
 			void Initialize();
             void Clear();
             void SetSizeAndType(int size, uint8_t type);
-            void SetInteger(uint32_t index, int int_val);
-            void SetInteger2();
+            void SetStructure(uint32_t index, Script::LazyStruct* p_struct);
             
 	};
     
