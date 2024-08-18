@@ -40,6 +40,66 @@ ButtonLookup_NativeCall* ButtonLookup_Native = (ButtonLookup_NativeCall*)(0x0040
 typedef uint32_t __cdecl unkButtonMap_NativeCall(uint32_t buttonmap);
 unkButtonMap_NativeCall* unkButtonMap_Native = (unkButtonMap_NativeCall*)(0x00479070);
 
+
+
+
+//---------------------------------
+// Hook for Obj::CWalkCameraComponent::Update
+// Used for shakes!
+//---------------------------------
+
+uint32_t WCC_Update_Native_Var = 0x005251D0;
+uint32_t Cam_GetComponent_Native_Var = 0x0045DB90;
+uint32_t AddShake_Native_Var = 0x004F9F00;
+
+void __declspec(naked) WalkCamComponent_Update_Hook()
+{
+	/*
+	WCC_Update_Native(cam);
+
+	// Add shake from the skater cam onto this cam.
+	// This allows shaking even when we're off the board.
+
+	Obj::CSkaterCameraComponent* skaterCam = (Obj::CSkaterCameraComponent*)GetComponent_Native(cam->mp_object, 0x5E43A604); // skatercamera
+	if (skaterCam && skaterCam->mShakeDuration > 0.0) {
+		Mth::Vector* pos = (Mth::Vector*)&(cam->mp_object->m_pos);
+		Mth::Matrix* mtr = (Mth::Matrix*)&(cam->mp_object->orientation);
+		AddShake_Native(skaterCam, pos, mtr);
+	}
+	*/
+	__asm {
+		push ebx
+		mov ebx, ecx
+		sub esp, 0x18
+		call dword ptr ds : WCC_Update_Native_Var
+		mov ecx, dword ptr ds : [ebx + 0xC]
+		mov dword ptr ss : [esp] , 0x5E43A604
+		call dword ptr ds : Cam_GetComponent_Native_Var
+		sub esp, 4
+		test eax, eax
+		je label_end
+		fldz
+		fld dword ptr[eax + 0x154]
+		mov ecx, eax
+		fcomip st(0), st(1)
+		fstp st(0)
+		jbe label_end
+		mov eax, dword ptr ds : [ebx + 0xC]
+		lea edx, ds : [eax + 0x6C]
+		add eax, 0x4C
+		mov dword ptr ss : [esp + 0x4] , edx
+		mov dword ptr ss : [esp] , eax
+		call dword ptr ds : AddShake_Native_Var
+		sub esp, 0x8
+	label_end:
+		add esp, 0x18
+		pop ebx
+		ret
+	}
+}
+
+
+
 void initPatch() {
 	/* First, patch static values into the exe */
 	patchStaticValues();
@@ -229,6 +289,9 @@ void patchStaticValues() {
 	patchCall((void*)0x004523A7, &Rnd_fixed);
 	patchCall((void*)0x004523B4, &Rnd_fixed);
 	patchCall((void*)0x004523F6, &Rnd_fixed);
+
+	// Allows shake for walk camera! This will not work otherwise.
+	patchDWord((void*)0x0064C5E4, (int32_t)&WalkCamComponent_Update_Hook);
 }
 
 void __fastcall reorderFlashVertices(void* unused, uint32_t* d3dDevice, void* alsodevice, uint32_t prim, uint32_t count, struct flashVertex* vertices, uint32_t stride) {
