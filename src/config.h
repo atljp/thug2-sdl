@@ -13,6 +13,7 @@
 #include "QB/LazyStruct.h"
 #include "QB/Qb.h"
 #include "QB/script.h"
+#include "QB/CFuncs.h"
 
 void InitInstance(HANDLE hModule);
 void LoadOriginalDll(void);

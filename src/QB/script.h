@@ -1,8 +1,9 @@
-#include <QB/LazyStruct.h>
-#include <QB/Qb.h>
-#include <stdio.h>
-#include <patch.h>
-#include <Logger/Logger.h>
+#include "QB/LazyStruct.h"
+#include "QB/Qb.h"
+#include "stdio.h"
+#include "patch.h"
+#include "Logger/Logger.h"
+#include "CFuncs.h"
 
 void patchScripts();
 void initScriptPatch();

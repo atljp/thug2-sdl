@@ -227,7 +227,7 @@ BOOL SetScreenElementProps_Wrapper(Script::LazyStruct* pParams, DummyScript* pSc
 					event_handlers->AddStructure(0x7031F10C, params); /*params*/
 
 					Script::LazyArray* exit_board_scaling = Script::LazyArray::s_create();
-					exit_board_scaling->SetSizeAndType(1, ESYMBOLTYPE_INTEGER);
+					exit_board_scaling->SetSizeAndType(1, 0xA); /*ESYMBOLTYPE_INTEGER*/
 					exit_board_scaling->SetStructure(0, event_handlers);
 					cas_menu->AddArray(0x475BF03C, exit_board_scaling); /*event_handlers*/
 					SetScreenElementProps_Native(cas_menu, pScript);
@@ -466,13 +466,16 @@ void patchScripts()
 	patchCall((void*)0x00474F25, LookUpSymbol_Patched); /* accesses the global hash map */
 
 	/*patch CFuncs*/
-	patchDWord((void*)0x0068146C, (uint32_t)&IsPS2_Patched); /* returns true for the neversoft test skater */
-	patchDWord((void*)0x0068147C, (uint32_t)&IsXBOX_Patched); /* load OpenSpy logo */
-	patchDWord((void*)0x0067F7D4, (uint32_t)&GetMemCardSpaceAvailable_Patched);
-	patchDWord((void*)0x00680C6C, (uint32_t)&CreateScreenElement_Wrapper); /* adjusts scale and position of main menu screen elements in widescreen */
-	patchDWord((void*)0x00680C84, (uint32_t)&SetScreenElementProps_Wrapper); /* add unlimited three-axes scaling and board scaling to C-A-S */
+	CFuncs::RedirectFunction("IsPS2_Patched", IsPS2_Patched); /*returns true for the neversoft test skater*/
+	CFuncs::RedirectFunction("IsXBOX", IsXBOX_Patched); /*load OpenSpy logo*/
+	CFuncs::RedirectFunction("GetMemCardSpaceAvailable", GetMemCardSpaceAvailable_Patched); /*fix large drive bug*/
+	CFuncs::RedirectFunction("CreateScreenElement", CreateScreenElement_Wrapper); /*adjusts scale and position of main menu screen elements in widescreen*/
+	CFuncs::RedirectFunction("SetScreenElementProps", SetScreenElementProps_Wrapper); /*add unlimited three-axes scaling and board scaling to C-A-S*/
+
 	
 	Log::TypedLog(CHN_DLL, "Initializing CFuncs\n");
+
+	
 
 	//TEST
 	//patchCall((void*)0x0046EEA3, ParseQB_Patched); /* loads script files */

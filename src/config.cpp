@@ -104,6 +104,15 @@ void initPatch() {
 	/* First, patch static values into the exe */
 	patchStaticValues();
 
+	/* Copy CFuncs to our own area which can be searched and expanded */
+	CFuncs::CopyStockFunctions();
+
+	/* Make game refer to our function list */
+	patchDWord((void*)ADDR_CFuncListRef, CFuncs::Pointer_Functions());
+
+	/* Refer to new function for grabbing amount of CFuncs */
+	patchCall((void*)ADDR_CFuncCountRef, (void*)CFuncs::Pointer_FunctionCount());
+
 	/* Read INI config values */
 	char configFile[MAX_PATH];
 	getConfigFilePath(configFile);
