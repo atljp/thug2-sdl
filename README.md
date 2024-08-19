@@ -20,6 +20,7 @@ This mod is still under development!
 - THUG Airdrift
 - Online play
 - Unlimited three-axes scaling in Create-A-Skater
+- Increased ranges for color sliders in Create-A-Skater
 - Adjustable Drop down key(s)
 - Improved graphics (shadows and edges are slightly sharper, most noticeably on high resolutions)
 - Fixed graphical bug during screen flashes (e.g. Frankling Grind)
@@ -46,7 +47,6 @@ This mod is still under development!
 - Option to move gamecontrollerdb into data folder
 - Fix broken savefiles having _ in the name
 - Menu to load online preferences
-- Unlimited color sliders
 - Ped items in Create-A-Skater
 - Include leftover files as sprays
 - Empty sticker texture
