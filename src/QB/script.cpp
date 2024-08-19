@@ -193,6 +193,7 @@ BOOL SetScreenElementProps_Wrapper(Script::LazyStruct* pParams, DummyScript* pSc
 	SkateInstance* Skate = (SkateInstance*)*(uint32_t*)(0x007CE478);
 	uint32_t p_checksum = 0;
 	BOOL done = FALSE;
+	BOOL patched_color_sliders = FALSE;
 
 	if (Skate->level == 0xE92ECAFE) { /*load_mainmenu*/
 
@@ -251,6 +252,19 @@ BOOL SetScreenElementProps_Wrapper(Script::LazyStruct* pParams, DummyScript* pSc
 						return native_val;
 					}
 				}
+			}
+			else if (!patched_color_sliders)
+			{
+				/*patch color sliders while we're in the CAS menu. earlier patches get overwritten*/
+				removeScript(0xB26B0D6F);
+				sCreateSymbolOfTheFormNameEqualsValue_Native((uint8_t*)float_val_zero, 0xB26B0D6F /*colormenu_min_value*/, "scripts\\mainmenu\\levels\\mainmenu\\colormenu.qb");
+				removeScript(0x6580BF2E);
+				sCreateSymbolOfTheFormNameEqualsValue_Native((uint8_t*)float_val_hundred, 0x6580BF2E /*colormenu_max_value*/, "scripts\\mainmenu\\levels\\mainmenu\\colormenu.qb");
+				removeScript(0x63BBA1ED);
+				sCreateSymbolOfTheFormNameEqualsValue_Native((uint8_t*)float_val_zero, 0x63BBA1ED /*colormenu_min_saturation*/, "scripts\\mainmenu\\levels\\mainmenu\\colormenu.qb");
+				removeScript(0xDA9D3A9C);
+				sCreateSymbolOfTheFormNameEqualsValue_Native((uint8_t*)float_val_hundred, 0xDA9D3A9C /*colormenu_max_saturation*/, "scripts\\mainmenu\\levels\\mainmenu\\colormenu.qb");
+				patched_color_sliders = TRUE;
 			}
 		}
 		else if (pScript->mScriptNameChecksum == 0x1B95F333) /*script: create_scale_options_menu*/
@@ -365,6 +379,8 @@ void loadScripts()
 
 	if (mScriptsettings.suninnetgame)
 		removeScript(0x8054f197); /* disablesun */
+
+	/*calling sCreateSymbolOfTheFormNameEqualsValue_Native here requires manual stack cleanup: __asm {add esp, 0x8}*/
 }
 
 void setDropDownKeys()
@@ -472,7 +488,6 @@ void patchScripts()
 	CFuncs::RedirectFunction("CreateScreenElement", CreateScreenElement_Wrapper); /*adjusts scale and position of main menu screen elements in widescreen*/
 	CFuncs::RedirectFunction("SetScreenElementProps", SetScreenElementProps_Wrapper); /*add unlimited three-axes scaling and board scaling to C-A-S*/
 
-	
 	Log::TypedLog(CHN_DLL, "Initializing CFuncs\n");
 
 	

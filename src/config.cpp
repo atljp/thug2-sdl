@@ -13,6 +13,10 @@ uint16_t* clipping_distance2 = (uint16_t*)(0x007D6444);	//0x64 - 0x253 val*5 +95
 HWND* hwnd = (HWND*)0x007D6A28;
 SDL_Window* window;
 
+uint32_t WCC_Update_Native_Var = 0x005251D0;
+uint32_t Cam_GetComponent_Native_Var = 0x0045DB90;
+uint32_t AddShake_Native_Var = 0x004F9F00;
+
 uint8_t isWindowed;
 int8_t isBorderless;
 uint8_t console;
@@ -39,65 +43,6 @@ ButtonLookup_NativeCall* ButtonLookup_Native = (ButtonLookup_NativeCall*)(0x0040
 
 typedef uint32_t __cdecl unkButtonMap_NativeCall(uint32_t buttonmap);
 unkButtonMap_NativeCall* unkButtonMap_Native = (unkButtonMap_NativeCall*)(0x00479070);
-
-
-
-
-//---------------------------------
-// Hook for Obj::CWalkCameraComponent::Update
-// Used for shakes!
-//---------------------------------
-
-uint32_t WCC_Update_Native_Var = 0x005251D0;
-uint32_t Cam_GetComponent_Native_Var = 0x0045DB90;
-uint32_t AddShake_Native_Var = 0x004F9F00;
-
-void __declspec(naked) WalkCamComponent_Update_Hook()
-{
-	/*
-	WCC_Update_Native(cam);
-
-	// Add shake from the skater cam onto this cam.
-	// This allows shaking even when we're off the board.
-
-	Obj::CSkaterCameraComponent* skaterCam = (Obj::CSkaterCameraComponent*)GetComponent_Native(cam->mp_object, 0x5E43A604); // skatercamera
-	if (skaterCam && skaterCam->mShakeDuration > 0.0) {
-		Mth::Vector* pos = (Mth::Vector*)&(cam->mp_object->m_pos);
-		Mth::Matrix* mtr = (Mth::Matrix*)&(cam->mp_object->orientation);
-		AddShake_Native(skaterCam, pos, mtr);
-	}
-	*/
-	__asm {
-		push ebx
-		mov ebx, ecx
-		sub esp, 0x18
-		call dword ptr ds : WCC_Update_Native_Var
-		mov ecx, dword ptr ds : [ebx + 0xC]
-		mov dword ptr ss : [esp] , 0x5E43A604
-		call dword ptr ds : Cam_GetComponent_Native_Var
-		sub esp, 4
-		test eax, eax
-		je label_end
-		fldz
-		fld dword ptr[eax + 0x154]
-		mov ecx, eax
-		fcomip st(0), st(1)
-		fstp st(0)
-		jbe label_end
-		mov eax, dword ptr ds : [ebx + 0xC]
-		lea edx, ds : [eax + 0x6C]
-		add eax, 0x4C
-		mov dword ptr ss : [esp + 0x4] , edx
-		mov dword ptr ss : [esp] , eax
-		call dword ptr ds : AddShake_Native_Var
-		sub esp, 0x8
-	label_end:
-		add esp, 0x18
-		pop ebx
-		ret
-	}
-}
-
 
 
 void initPatch() {
@@ -643,6 +588,53 @@ void getConfigFilePath(char mConfigFile[MAX_PATH]) {
 		*(exe + 1) = '\0';
 	}
 	sprintf(mConfigFile, "%s%s", executableDirectory, CONFIG_FILE_NAME);
+}
+
+/* Hook for Obj::CWalkCameraComponent::Update. Used for shakes! */
+void __declspec(naked) WalkCamComponent_Update_Hook()
+{
+	/*
+	WCC_Update_Native(cam);
+
+	// Add shake from the skater cam onto this cam.
+	// This allows shaking even when we're off the board.
+
+	Obj::CSkaterCameraComponent* skaterCam = (Obj::CSkaterCameraComponent*)GetComponent_Native(cam->mp_object, 0x5E43A604); // skatercamera
+	if (skaterCam && skaterCam->mShakeDuration > 0.0) {
+		Mth::Vector* pos = (Mth::Vector*)&(cam->mp_object->m_pos);
+		Mth::Matrix* mtr = (Mth::Matrix*)&(cam->mp_object->orientation);
+		AddShake_Native(skaterCam, pos, mtr);
+	}
+	*/
+	__asm {
+		push ebx
+		mov ebx, ecx
+		sub esp, 0x18
+		call dword ptr ds : WCC_Update_Native_Var
+		mov ecx, dword ptr ds : [ebx + 0xC]
+		mov dword ptr ss : [esp] , 0x5E43A604
+		call dword ptr ds : Cam_GetComponent_Native_Var
+		sub esp, 4
+		test eax, eax
+		je label_end
+		fldz
+		fld dword ptr[eax + 0x154]
+		mov ecx, eax
+		fcomip st(0), st(1)
+		fstp st(0)
+		jbe label_end
+		mov eax, dword ptr ds : [ebx + 0xC]
+		lea edx, ds : [eax + 0x6C]
+		add eax, 0x4C
+		mov dword ptr ss : [esp + 0x4] , edx
+		mov dword ptr ss : [esp] , eax
+		call dword ptr ds : AddShake_Native_Var
+		sub esp, 0x8
+		label_end :
+		add esp, 0x18
+		pop ebx
+		ret
+	}
 }
 
 /* Keyboard binds */
