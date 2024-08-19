@@ -22,6 +22,7 @@ This mod is still under development!
 - Unlimited three-axes scaling in Create-A-Skater
 - Increased ranges for color sliders in Create-A-Skater
 - Adjustable Drop down key(s)
+- Quick bail getup
 - Improved graphics (shadows and edges are slightly sharper, most noticeably on high resolutions)
 - Fixed graphical bug during screen flashes (e.g. Frankling Grind)
 - Fixed camera shake effect not working while skater is off board (e.g. LA earthquake)
@@ -52,7 +53,6 @@ This mod is still under development!
 - Empty sticker texture
 - Colored text input
 - Prevent chat reset in netgames when starting/ending game or changing levels
-- Quick bail getup
 - Fun stuff: Boostplants, BHRA, low sticker slaps, wallride anywhere, jank drops, steep skating angles, high acid drops, etc..
 
 ## BUILDING

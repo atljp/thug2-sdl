@@ -136,6 +136,7 @@ struct scriptsettings {
 	uint8_t suninnetgame;
 	uint8_t boardscuffs;
 	uint8_t dropdowncontrol;
+	uint8_t quickgetup;
 };
 
 struct flashVertex {

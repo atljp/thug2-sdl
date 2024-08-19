@@ -29,6 +29,7 @@ uint8_t dropdowncontrol;
 uint8_t suninnetgame;
 uint8_t boardscuffs;
 uint8_t Ps2Controls;
+uint8_t quickgetup;
 uint8_t invertRXplayer1;
 uint8_t invertRYplayer1;
 
@@ -82,6 +83,7 @@ void initPatch() {
 	isBorderless = getIniBool(GRAPHICS_SECTION, "Borderless", 0, configFile);
 	Ps2Controls = getIniBool(CONTROLS_SECTION, "Ps2Controls", 1, configFile);
 	dropdowncontrol = GetPrivateProfileInt(CONTROLS_SECTION, "DropDownControl", 1, configFile);
+	quickgetup = GetPrivateProfileInt(GAMEPLAY_SECTION, "QuickGetUp", 0, configFile);
 	invertRXplayer1 = getIniBool(CONTROLS_SECTION, "InvertRXPlayer1", 0, configFile);
 	invertRYplayer1 = getIniBool(CONTROLS_SECTION, "InvertRYPlayer1", 0, configFile);
 
@@ -143,6 +145,9 @@ void initPatch() {
 		case 4: Log::TypedLog(CHN_DLL, "DropDownControl: L2\n"); break;
 		case 5: Log::TypedLog(CHN_DLL, "DropDownControl: R2\n"); break;
 	}
+
+	/*Quick get up from bails*/
+	Log::TypedLog(CHN_DLL, "Quick bail get up: %s\n", quickgetup ? "Enabled" : "Disabled");
 
 	/* Set spindelay. Off is Ps2 default, on is PC default (value = 100) */
 	if (!spindelay) {
@@ -417,6 +422,7 @@ void loadScriptSettings(struct scriptsettings* scriptsettingsOut) {
 		scriptsettingsOut->suninnetgame = suninnetgame;
 		scriptsettingsOut->boardscuffs = boardscuffs;
 		scriptsettingsOut->dropdowncontrol = dropdowncontrol;
+		scriptsettingsOut->quickgetup = quickgetup;
 	}
 }
 

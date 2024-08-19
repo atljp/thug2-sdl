@@ -306,6 +306,7 @@ void initScriptPatch()
 
 void LookUpSymbol_Patched(uint32_t checksum)
 {
+	/*unused for now*/
 	if (mScriptsettings.airdrift && checksum == 0x1CA80417 && !walkspinpatched) {
 		patchDWord((void*)(uint32_t)CSymbolTableEntryResolve_Native(checksum), 0);
 		walkspinpatched = true;
@@ -379,6 +380,21 @@ void loadScripts()
 
 	if (mScriptsettings.suninnetgame)
 		removeScript(0x8054f197); /* disablesun */
+
+	if (mScriptsettings.airdrift)
+		removeScript(GenerateCRCFromString_Native("flip_skater_if_180_off"));
+
+	if (!mScriptsettings.boardscuffs)
+		removeScript(GenerateCRCFromString_Native("DoBoardScuff"));
+
+	if (mScriptsettings.quickgetup)
+	{
+		removeScript(0x8F488DCA); /*bail_quick_getup2*/
+		uint32_t contentsChecksum4 = CalculateScriptContentsChecksum_Native((uint8_t*)bail_quick_getup2_new);
+		sCreateScriptSymbolWrapper(0x5A, (uint8_t*)bail_quick_getup2_new, 0x8F488DCA, contentsChecksum4, "scripts\\game\\skater\\bails.qb");
+
+		removeScript(GenerateCRCFromString_Native("NoQuickGetup"));
+	}
 
 	/*calling sCreateSymbolOfTheFormNameEqualsValue_Native here requires manual stack cleanup: __asm {add esp, 0x8}*/
 }
@@ -477,9 +493,8 @@ void patchScripts()
 	/* First, get config from INI. struct defined in config.h */
 	loadScriptSettings(&mScriptsettings);
 	loadInputSettings(&mInputsettings);
-
 	patchJump((void*)0x005A5B32, initScriptPatch);
-	patchCall((void*)0x00474F25, LookUpSymbol_Patched); /* accesses the global hash map */
+	
 
 	/*patch CFuncs*/
 	CFuncs::RedirectFunction("IsPS2_Patched", IsPS2_Patched); /*returns true for the neversoft test skater*/
@@ -497,5 +512,6 @@ void patchScripts()
 	//uint32_t bb = 0xDEADBEEF;
 	//uint32_t bb = GenerateCRCFromString_Native("white");
 	//printf("0x%08x\n", bb);
+	//patchCall((void*)0x00474F25, LookUpSymbol_Patched); /* accesses the global hash map */
 }
 
