@@ -16,6 +16,7 @@ SDL_Window* window;
 uint32_t WCC_Update_Native_Var = 0x005251D0;
 uint32_t Cam_GetComponent_Native_Var = 0x0045DB90;
 uint32_t AddShake_Native_Var = 0x004F9F00;
+uint32_t WallRideAnywhere_RetAddr = 0x00500468;
 
 uint8_t isWindowed;
 int8_t isBorderless;
@@ -30,6 +31,8 @@ uint8_t suninnetgame;
 uint8_t boardscuffs;
 uint8_t Ps2Controls;
 uint8_t quickgetup;
+uint8_t wallrideanywhere;
+uint8_t jankdrops;
 uint8_t invertRXplayer1;
 uint8_t invertRYplayer1;
 
@@ -45,6 +48,19 @@ ButtonLookup_NativeCall* ButtonLookup_Native = (ButtonLookup_NativeCall*)(0x0040
 typedef uint32_t __cdecl unkButtonMap_NativeCall(uint32_t buttonmap);
 unkButtonMap_NativeCall* unkButtonMap_Native = (unkButtonMap_NativeCall*)(0x00479070);
 
+
+void __declspec(naked) wallrideanywhere_patch()
+{
+	__asm {
+		cmp byte ptr ds : [esi + 0x228] , 0x0
+		jne $+0x0E
+		mov byte ptr ds : [esi + 0x22A] , 0x1
+		pop esi
+		pop ebx
+		add esp, 0x10
+		ret 8
+	}
+}
 
 void initPatch() {
 	/* First, patch static values into the exe */
@@ -69,8 +85,8 @@ void initPatch() {
 	intromovies = getIniBool(MISC_SECTION, "IntroMovies", 1, configFile);
 	spindelay = getIniBool(GAMEPLAY_SECTION, "SpinDelay", 1, configFile);
 	airdrift = getIniBool(GAMEPLAY_SECTION, "THUGAirDrift", 0, configFile);
-	suninnetgame = getIniBool(EXTRA_SECTION, "SunInNetGame", 0, configFile);
-	boardscuffs = getIniBool(EXTRA_SECTION, "Boardscuffs", 1, configFile);
+	suninnetgame = getIniBool(MISC_SECTION, "SunInNetGame", 0, configFile);
+	boardscuffs = getIniBool(MISC_SECTION, "Boardscuffs", 1, configFile);
 	graphics_settings.bettergraphics = getIniBool(GRAPHICS_SECTION, "BetterGraphics", 0, configFile);
 	graphics_settings.antialiasing = getIniBool(GRAPHICS_SECTION, "AntiAliasing", 0, configFile);
 	graphics_settings.hqshadows = getIniBool(GRAPHICS_SECTION, "HQShadows", 0, configFile);
@@ -84,6 +100,8 @@ void initPatch() {
 	Ps2Controls = getIniBool(CONTROLS_SECTION, "Ps2Controls", 1, configFile);
 	dropdowncontrol = GetPrivateProfileInt(CONTROLS_SECTION, "DropDownControl", 1, configFile);
 	quickgetup = GetPrivateProfileInt(GAMEPLAY_SECTION, "QuickGetUp", 0, configFile);
+	wallrideanywhere = GetPrivateProfileInt(EXTRA_SECTION, "WallrideAnywhere", 0, configFile);
+	jankdrops = GetPrivateProfileInt(EXTRA_SECTION, "JankDrops", 0, configFile);
 	invertRXplayer1 = getIniBool(CONTROLS_SECTION, "InvertRXPlayer1", 0, configFile);
 	invertRYplayer1 = getIniBool(CONTROLS_SECTION, "InvertRYPlayer1", 0, configFile);
 
@@ -155,6 +173,21 @@ void initPatch() {
 		patchNop((void*)ADDR_SpinLagR, 2);
 	}
 	Log::TypedLog(CHN_DLL, "Spindelay: %s\n", spindelay ? "Enabled (PC default)" : "Disabled (Ps2 default)");
+
+	/*Extra tech: Wallride anywhere*/
+	if (wallrideanywhere)
+	{
+		patchJump((void*)0x00500441, wallrideanywhere_patch);
+		if (wallrideanywhere == 2) patchNop((void*)0x00500424, 6);
+	}
+	Log::TypedLog(CHN_DLL, "Wallride Anywhere: %s\n", (wallrideanywhere == 2) ? "Extended" : (wallrideanywhere ? "Enabled" : "Disabled"));
+
+	if (jankdrops)
+	{
+		patchNop((void*)0x00502629, 6);
+		patchDWord((void*)0x006467BC, 0x3F733333);
+	}
+	Log::TypedLog(CHN_DLL, "Jank Drops: %s\n", jankdrops ? "Enabled" : "Disabled");
 
 	/* Graphic settings */
 	if (graphics_settings.bettergraphics) {

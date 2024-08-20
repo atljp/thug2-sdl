@@ -28,7 +28,7 @@ void ExitInstance(void);
 #define EXTRA_SECTION "Extra"
 #define CONTROLS_SECTION "Controls"
 #define VERSION_NUMBER_MAJOR 0
-#define VERSION_NUMBER_MINOR 4
+#define VERSION_NUMBER_MINOR 5
 
 struct keybinds {
 	//SDL_Scancode menu;
