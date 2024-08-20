@@ -142,7 +142,7 @@ bool CreateScreenElement_Wrapper(Script::LazyStruct* pParams, DummyScript* pScri
 	uint32_t p_checksum = 0;
 	uint32_t p_checksum2 = 0;
 
-	if (Skate->level == 0xE92ECAFE && getaspectratio() > 1.34f) { /*level: load_mainmenu*/
+	if ((Skate->level == 0xE92ECAFE && getaspectratio() > 1.34f && getaspectratio() < 1.8f)) { /*level: load_mainmenu*/
 
 		if (pScript->mScriptNameChecksum == 0x7C92D11A) {  /*script: make_mainmenu_3d_plane*/
 
@@ -181,6 +181,37 @@ bool CreateScreenElement_Wrapper(Script::LazyStruct* pParams, DummyScript* pScri
 					pParams->AddPair(0x7F261953, 95.0f, 213.0f); /*pos*/
 					pParams->AddFloat(0x13B9DA7B, 0.82f); /*scale*/
 				}
+			}
+		}
+	}
+	else if (Skate->level == 0xE92ECAFE && getaspectratio() > 1.8f) {
+
+		if (pScript->mScriptNameChecksum == 0x7C92D11A) {  /*script: make_mainmenu_3d_plane*/
+
+			pParams->GetChecksum(0x40C698AF, &p_checksum, false);  /*id*/
+
+			if (p_checksum == 0xBC4B9584) /*bg_plane*/
+				pParams->AddInteger(0xED7C6031, -281); /*cameraz*/
+		}
+		else if (pScript->mScriptNameChecksum == 0xAD62B0B3) { /*script: build_roundbar*/
+
+			pParams->GetChecksum(0x7321A8D6, &p_checksum, false); /*type*/
+			pParams->GetChecksum(0x40C698AF, &p_checksum2, false); /*id*/
+
+			if (p_checksum == 0x5B9DA842 /*containerelement*/ && p_checksum2 == 0x1954867E /*roundbar_bar*/) {
+				
+					pParams->AddFloat(0x13B9DA7B, 0.60f); /*scale*/
+					pParams->AddPair(0x7F261953, 200.0f, 216.0f); /*pos*/
+			}
+		}
+		else if (pScript->mScriptNameChecksum == 0x59F6E121) { /*script: make_spin_menu*/
+
+			pParams->GetChecksum(0x7321A8D6, &p_checksum, false); /*type*/
+			pParams->GetChecksum(0x40C698AF, &p_checksum2, false); /*id*/
+
+			if (p_checksum == 0x130EF802 /* vmenu */ && p_checksum2 == 0xB0524B44 /*main_vmenu*/) {
+					pParams->AddPair(0x7F261953, 164.0f, 227.0f); /*pos*/
+					pParams->AddFloat(0x13B9DA7B, 0.60f); /*scale*/
 			}
 		}
 	}

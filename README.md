@@ -35,7 +35,6 @@ This mod is still under development!
 - Error manager with crash reports
 - Move / resize borderless window without locking the thread
 - Textinput for more keyboard layouts: FR, UK, GER, RUS (new font?)
-- Main menu 21:9 and 21:10 aspect ratio support
 - More special text characters
 - CAP surgeon mod
 - Vanilla / speedrun mode
