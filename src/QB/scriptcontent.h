@@ -156,9 +156,9 @@ const uint8_t float_val_hundred[] = {
 	: i if NOT $Inair$
 		: i $SetRollingFriction$% i(40, 00000028)
 		: i $GetCurrentBailEndpose$
-			: i if NOT(% GLOBAL % $current_bail_endpose$ = $none$)
+			: i if NOT(%GLOBAL% $current_bail_endpose$ = $none$)
 			: i $SetCurrentBailEndpose$
-			: i $MakeSkaterGoto$% GLOBAL% $current_bail_endpose$$params$ = : s{ $Quick$ = $True$:s }
+			: i $MakeSkaterGoto$%GLOBAL% $current_bail_endpose$$params$ = : s{ $Quick$ = $True$:s }
 		: i endif
 	: i endif
 : i endfunction

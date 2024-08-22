@@ -237,11 +237,13 @@ BOOL SetScreenElementProps_Wrapper(Script::LazyStruct* pParams, DummyScript* pSc
 				if (!done)
 				{
 					/*
-					exit_board_scaling = [ event_handlers = { 
-					id = mod_vmenu
-					pad_back
-					showboardmyan
-					params = { turn_off } } ]
+					exit_board_scaling = [ 
+						event_handlers = { 
+							id = mod_vmenu
+							pad_back
+							showboardmyan params = { turn_off } 
+						} 
+					]
 					*/
 
 					done = TRUE;
@@ -400,7 +402,6 @@ void loadScripts()
 
 	removeScript(0x9F95228A); /* scalingmenu_get_limits */
 	uint32_t temp = CalculateScriptContentsChecksum_Native((uint8_t*)scalingmenu_get_limits_original);
-	//printf("AAAAAAAA: 0x%08x\n", temp);
 	sCreateScriptSymbolWrapper(0x37, (uint8_t*)scalingmenu_get_limits_addition, 0x9F95228A, temp, "scripts\\myan.qb");
 
 	//removeScript(0x1B95F333); /* create_scale_options_menu */

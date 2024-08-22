@@ -27,6 +27,7 @@ void ExitInstance(void);
 #define GAMEPLAY_SECTION "Gameplay"
 #define EXTRA_SECTION "Extra"
 #define CONTROLS_SECTION "Controls"
+#define MOD_SECTION "AdditionalMods"
 #define VERSION_NUMBER_MAJOR 0
 #define VERSION_NUMBER_MINOR 5
 

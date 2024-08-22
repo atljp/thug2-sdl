@@ -2,6 +2,7 @@
 #include <d3d9types.h>
 
 char* executableDirectory[MAX_PATH];
+char configFile[MAX_PATH];
 
 float* screenAspectRatio = (float*)0x00701340;
 uint8_t* antialiasing = (uint8_t*)(0x007D6434);
@@ -76,7 +77,6 @@ void initPatch() {
 	patchCall((void*)ADDR_CFuncCountRef, (void*)CFuncs::Pointer_FunctionCount());
 
 	/* Read INI config values */
-	char configFile[MAX_PATH];
 	getConfigFilePath(configFile);
 
 	console = GetPrivateProfileInt(MISC_SECTION, "Console", 0, configFile);
@@ -745,4 +745,51 @@ void loadControllerBinds(struct controllerbinds* bindsOut) {
 		bindsOut->movement = (controllerStick)GetPrivateProfileInt(CONTROLLER_SECTION, "MovementStick", CONTROLLER_STICK_LEFT, configFile);
 		bindsOut->camera = (controllerStick)GetPrivateProfileInt(CONTROLLER_SECTION, "CameraStick", CONTROLLER_STICK_RIGHT, configFile);
 	}
+}
+
+
+//####################################
+
+const char test[] = "mm/scripts.pre";
+
+typedef void __cdecl loadpre_NativeCall(uint8_t* p_data);
+loadpre_NativeCall* loadpre_Native = (loadpre_NativeCall*)(0x005B75A0);
+
+void loadpre_wrapper(uint8_t* p_data)
+{
+	//printf("uebergabeparameter: 0x%08x\n", p_data);
+	//printf("text: %s\n", (const char*)p_data);
+
+
+	//int32_t edi = *reinterpret_cast<int32_t*>(reinterpret_cast<uint32_t>(_AddressOfReturnAddress()) + 4);
+	//printf("esp+4 address: 0x%08x\n", (uint32_t*)edi);
+	//printf("AAA:%s\n", (const char*)edi);
+	if (!strcmp((const char*)p_data, "qb_scripts.pre")) {
+		//printf("PRE: %s\n", (const char*)p_data);
+		p_data = (uint8_t*)"myanmod/e9_scripts.pre";
+	}
+	else if (!strcmp((const char*)p_data, "anims.pre"))
+		p_data = (uint8_t*)"myanmod/e9_anims.pre";
+	else if (!strcmp((const char*)p_data, "netanims.pre"))
+		p_data = (uint8_t*)"myanmod/e9_netanims.pre";
+
+	loadpre_Native(p_data);
+
+
+}
+
+bool usemod = false;
+char modfolder[MAX_PATH];
+void initMod()
+{
+	usemod = getIniBool(MOD_SECTION, "UseMod", 0, configFile);
+	DWORD modfolder_temp = GetPrivateProfileString(MOD_SECTION, "Folder", "data/pre/mymod", modfolder, sizeof(modfolder), configFile);
+	if (usemod)
+	{
+		printf("MODFOLDER: %s\n", modfolder);
+
+
+	}
+	patchCall((void*)0x005A59FB, loadpre_wrapper);
+	patchCall((void*)0x005B7ADE, loadpre_wrapper);
 }
