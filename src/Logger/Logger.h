@@ -13,7 +13,7 @@
 #define CHN_MEMORY	"Mem"
 #define CHN_DLL		"DLL"
 #define CHN_SAVE	"Save"
-#define CHN_MOD		"Mod"
+#define CHN_MOD		"MOD"
 #define CHN_LOG		"Log"
 #define CHN_DEBUG	"Debug"
 #define CHN_INI		"INI"
