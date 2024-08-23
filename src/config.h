@@ -167,6 +167,7 @@ float getScreenAngleFactor();
 float getaspectratio();
 void loadScriptSettings(struct scriptsettings* scriptsettingsOut);
 void getConfigFilePath(char mConfigFile[MAX_PATH]);
+void wallrideanywhere_patch();
 void WalkCamComponent_Update_Hook();
 void loadKeyBinds(struct keybinds* bindsOut);
 void loadControllerBinds(struct controllerbinds* bindsOut);
