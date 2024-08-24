@@ -68,6 +68,11 @@ bool filemissing = FALSE;
 bool using_qbscripts = TRUE;
 bool using_anims = TRUE;
 bool using_netanims = TRUE;
+bool using_mainmenu_scripts = TRUE;
+char mainmenu_scripts_from_mod[30];
+char full_mainmenu_scripts_from_mod[MAX_PATH];
+char mainmenu_scripts_for_injection[60];
+
 struct stat info;
 
 typedef uint32_t ButtonLookup_NativeCall(char* button);
@@ -787,6 +792,8 @@ void LoadPre_Wrapper(uint8_t* p_data)
 	//int32_t edi = *reinterpret_cast<int32_t*>(reinterpret_cast<uint32_t>(_AddressOfReturnAddress()) + 4);
 	//printf("esp+4 address: 0x%08x\n", (uint32_t*)edi);
 	//printf("AAA:%s\n", (const char*)edi);
+
+	/*ignore first letter in case it is capitalized*/
 	if ((!strcmp((const char*)p_data+1, "b_scripts.prx") || !strcmp((const char*)p_data+1, "qb_scripts.pre")) && using_qbscripts) {
 			Log::TypedLog(CHN_MOD, "Successfully replaced %s with %s\n", (const char*)p_data, qb_scripts_for_injection);
 			p_data = (uint8_t*)qb_scripts_for_injection;
@@ -802,9 +809,59 @@ void LoadPre_Wrapper(uint8_t* p_data)
 	LoadPre_Native(p_data);
 }
 
+
+typedef void (__thiscall* PreMgrLoadPre_NativeCall)(void* arg1, uint8_t* arg2, char* arg3, char* arg4, char arg5);
+PreMgrLoadPre_NativeCall PreMgrLoadPre = (PreMgrLoadPre_NativeCall)(0x005B8EE0);
+
+
+void __fastcall PreMgrLoadPre_Wrapper(void* arg1, void* unused, uint8_t* p_data, char* arg3, char* arg4, char arg5) {
+	//printf("uebergabeparameter: 0x%08x\n", arg1);
+	//printf("ALL: %s\n", (const char*)p_data);
+	
+	/*ignore first letter in case it is capitalized*/
+	if ((!strcmp((const char*)p_data + 1, "ainmenu_scripts.prx") || !strcmp((const char*)p_data + 1, "ainmenu_scripts.pre")) && using_mainmenu_scripts) {
+		Log::TypedLog(CHN_MOD, "Successfully replaced %s with %s\n", (const char*)p_data, mainmenu_scripts_for_injection);
+		p_data = (uint8_t*)mainmenu_scripts_for_injection;
+	}
+	/*
+	else if (!strcmp((const char*)p_data + 1, "anelsprites.prx") || !strcmp((const char*)p_data + 1, "anelsprites.pre")) {
+		printf("PANELSPRITES: %s\n", (const char*)p_data);
+		p_data = (uint8_t*)"BelaMod/bela_panelsprites.prx";
+	}
+	else if (!strcmp((const char*)p_data + 1, "ainmenu_scripts.prx") || !strcmp((const char*)p_data + 1, "ainmenu_scripts.pre")) {
+		printf("MAINMENU: %s\n", (const char*)p_data);
+		p_data = (uint8_t*)"BelaMod/e9_mainmenu_scripts.prx";
+	}
+	*/
+
+
+
+
+	/*
+	permtex.pre
+	casfiles.pre
+	skater_sounds.pre
+	skeletons.pre
+	bits.pre
+	fonts.pre
+	panelsprites.pre
+	Themes.pre
+	mainmenuscn.pre
+	mainmenu_scripts.pre
+	mainmenusprites.pre
+	multiplayersprites.pre
+	skaterparts.pre
+	skaterparts_temp.pre
+	cagpieces.pre
+	*/
+	
+	PreMgrLoadPre(arg1, p_data, arg3, arg4, arg5);
+	
+}
+
 void initMod()
 {
-	DWORD tempdw = GetPrivateProfileString(MOD_SECTION, "Folder", "", modfolder, sizeof(modfolder), configFile);
+	GetPrivateProfileString(MOD_SECTION, "Folder", "", modfolder, sizeof(modfolder), configFile);
 	if (usemod)
 	{
 		/*check if modfolder was specified in partymod.ini. Folders are specified relative to the game directory (data\pre\mymod)*/
@@ -846,7 +903,7 @@ void initMod()
 			/*check if modded files exists as defined in mod.ini*/
 			char* lastSlash = strrchr(modfolder, '\\'); /*lastSlash+1 has the last word of a path (e.g. mymod in data\mod\pre\mymod)*/
 
-			DWORD tempdw3 = GetPrivateProfileString("MODINFO", "qb_scripts.prx", "UNDEFINED", qbscripts_from_mod, sizeof(qbscripts_from_mod), ini_file); /*get info from mod.ini: get the new qb_scripts.prx filename*/
+			GetPrivateProfileString("MODINFO", "qb_scripts.prx", "UNDEFINED", qbscripts_from_mod, sizeof(qbscripts_from_mod), ini_file); /*get info from mod.ini: get the new qb_scripts.prx filename*/
 			if (strcmp((const char*)qbscripts_from_mod, "UNDEFINED")) { /*only check for the file if it was specified in mod.ini*/
 				sprintf_s(full_qbscripts_from_mod, "%s%s%s", full_modfolder, "\\", qbscripts_from_mod); /*check if file exists on hard drive*/
 				std::ifstream infile_qb_scripts(full_qbscripts_from_mod);
@@ -863,7 +920,7 @@ void initMod()
 				using_qbscripts = FALSE;
 			}
 
-			DWORD tempdw4 = GetPrivateProfileString("MODINFO", "anims.prx", "UNDEFINED", anims_from_mod, sizeof(anims_from_mod), ini_file);
+			GetPrivateProfileString("MODINFO", "anims.prx", "UNDEFINED", anims_from_mod, sizeof(anims_from_mod), ini_file);
 			if (strcmp((const char*)anims_from_mod, "UNDEFINED")) {
 				sprintf_s(full_anims_from_mod, "%s%s%s", full_modfolder, "\\", anims_from_mod);
 				std::ifstream infile_anims(full_anims_from_mod);
@@ -880,7 +937,7 @@ void initMod()
 				using_anims = FALSE;
 			}
 
-			DWORD tempdw5 = GetPrivateProfileString("MODINFO", "netanims.prx", "UNDEFINED", netanims_from_mod, sizeof(netanims_from_mod), ini_file);
+			GetPrivateProfileString("MODINFO", "netanims.prx", "UNDEFINED", netanims_from_mod, sizeof(netanims_from_mod), ini_file);
 			if (strcmp((const char*)netanims_from_mod, "UNDEFINED")) {
 				sprintf_s(full_netanims_from_mod, "%s%s%s", full_modfolder, "\\", netanims_from_mod);
 				std::ifstream infile_netanims(full_netanims_from_mod);
@@ -897,12 +954,25 @@ void initMod()
 				using_netanims = FALSE;
 			}
 
+			GetPrivateProfileString("MODINFO", "mainmenu_scripts.prx", "UNDEFINED", mainmenu_scripts_from_mod, sizeof(mainmenu_scripts_from_mod), ini_file);
+			if (strcmp((const char*)mainmenu_scripts_from_mod, "UNDEFINED")) {
+				sprintf_s(full_mainmenu_scripts_from_mod, "%s%s%s", full_modfolder, "\\", mainmenu_scripts_from_mod);
+				std::ifstream infile_mainemenu_scripts(full_mainmenu_scripts_from_mod);
+				if (infile_mainemenu_scripts.good()) {
+					Log::TypedLog(CHN_MOD, "Found modded mainmenu_scripts! File: %s\n", mainmenu_scripts_from_mod);
+					sprintf_s(mainmenu_scripts_for_injection, "%s%s%s", lastSlash + 1, "/", mainmenu_scripts_from_mod);
+				}
+				else {
+					Log::TypedLog(CHN_MOD, "ERROR: Couldn\'t find modded mainmenu_scripts!\n");
+					filemissing = TRUE;
+				}
+			}
+			else {
+				using_mainmenu_scripts = FALSE;
+			}
+
 			if (filemissing) {
 				Log::TypedLog(CHN_MOD, "ERROR: Missing files defined in mod.ini\n"); return;
-				//printf("QBSCRIPTS FOR INJECTION %s\n", qb_scripts_for_injection);
-				//printf("qb_scripts: %s\n", qbscripts_from_mod);
-				//printf("anims: %s\n", anims_from_mod);
-				//printf("netanims: %s\n", netanims_from_mod);
 			}
 		}
 		else {
@@ -910,5 +980,6 @@ void initMod()
 		}
 		patchCall((void*)0x005A59FB, LoadPre_Wrapper);
 		patchCall((void*)0x005B7ADE, LoadPre_Wrapper);
+		patchCall((void*)0x005B94F7, PreMgrLoadPre_Wrapper);
 	}
 }
