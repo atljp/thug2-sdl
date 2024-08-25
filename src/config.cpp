@@ -1,15 +1,11 @@
 #include "config.h"
 #include <d3d9types.h>
+#include <modloader.h>
 
-#include <sys/stat.h>
-#include <string>
-#include <fstream>
-#include <iostream>
-#include <sys/stat.h>
-#include <cctype>
-
+struct modsettings windowtitle_maybe;
 char* executableDirectory[MAX_PATH];
 char configFile[MAX_PATH];
+char window_title[MAX_PATH] = "THUG2 PARTYMOD";
 
 float* screenAspectRatio = (float*)0x00701340;
 uint8_t* antialiasing = (uint8_t*)(0x007D6434);
@@ -43,6 +39,7 @@ uint8_t wallrideanywhere;
 uint8_t jankdrops;
 uint8_t invertRXplayer1;
 uint8_t invertRYplayer1;
+bool usemod = false;
 
 int resX;
 int resY;
@@ -50,39 +47,11 @@ int defWidth;
 int defHeight;
 graphicsSettings graphics_settings;
 
-bool usemod = false;
-char modname[30];
-char modfolder[MAX_PATH];
-char full_modfolder[MAX_PATH];
-char ini_file[MAX_PATH];
-char qbscripts_from_mod[30];
-char anims_from_mod[30];
-char netanims_from_mod[30];
-char full_qbscripts_from_mod[MAX_PATH];
-char full_anims_from_mod[MAX_PATH];
-char full_netanims_from_mod[MAX_PATH];
-char qb_scripts_for_injection[60];
-char anims_for_injection[60];
-char netanims_for_injection[60];
-bool filemissing = FALSE;
-bool using_qbscripts = TRUE;
-bool using_anims = TRUE;
-bool using_netanims = TRUE;
-bool using_mainmenu_scripts = TRUE;
-char mainmenu_scripts_from_mod[30];
-char full_mainmenu_scripts_from_mod[MAX_PATH];
-char mainmenu_scripts_for_injection[60];
-
-struct stat info;
-
 typedef uint32_t ButtonLookup_NativeCall(char* button);
 ButtonLookup_NativeCall* ButtonLookup_Native = (ButtonLookup_NativeCall*)(0x004020E0);
 
 typedef uint32_t __cdecl unkButtonMap_NativeCall(uint32_t buttonmap);
 unkButtonMap_NativeCall* unkButtonMap_Native = (unkButtonMap_NativeCall*)(0x00479070);
-
-typedef void __cdecl LoadPre_NativeCall(uint8_t* p_data);
-LoadPre_NativeCall* LoadPre_Native = (LoadPre_NativeCall*)(0x005B75A0);
 
 void initPatch() {
 	/* First, patch static values into the exe */
@@ -400,7 +369,11 @@ void createSDLWindow() {
 
 	Log::TypedLog(CHN_DLL, "Aspect ratio: %f\n", getaspectratio());
 
-	window = SDL_CreateWindow("THUG2 PARTYMOD", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, resX, resY, flags);   // TODO: move / resize borderless window
+	if (usemod) {
+		getWindowTitle(&windowtitle_maybe);
+		if (strlen(windowtitle_maybe.windowtitle)) sprintf_s(window_title, "%s%s%s%s", window_title, " (", windowtitle_maybe.windowtitle, ")");
+	}
+	window = SDL_CreateWindow(window_title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, resX, resY, flags);   // TODO: move / resize borderless window
 	SDL_SetWindowResizable(window, SDL_TRUE);
 
 	if (!window)
@@ -481,6 +454,14 @@ void loadScriptSettings(struct scriptsettings* scriptsettingsOut) {
 		scriptsettingsOut->dropdowncontrol = dropdowncontrol;
 		scriptsettingsOut->quickgetup = quickgetup;
 	}
+}
+
+/* called from initMod */
+void loadModSettings(struct modsettings* modsettingsOut) {
+	modsettingsOut->usemod = usemod;
+	modsettingsOut->configfile = configFile;
+	modsettingsOut->workingdir = (char*)executableDirectory;
+
 }
 
 int getIniBool(const char* section, const char* key, int def, char* file) {
@@ -781,205 +762,5 @@ void loadControllerBinds(struct controllerbinds* bindsOut) {
 
 		bindsOut->movement = (controllerStick)GetPrivateProfileInt(CONTROLLER_SECTION, "MovementStick", CONTROLLER_STICK_LEFT, configFile);
 		bindsOut->camera = (controllerStick)GetPrivateProfileInt(CONTROLLER_SECTION, "CameraStick", CONTROLLER_STICK_RIGHT, configFile);
-	}
-}
-
-void LoadPre_Wrapper(uint8_t* p_data)
-{
-	//printf("uebergabeparameter: 0x%08x\n", p_data);
-	//printf("text: %s\n", (const char*)p_data);
-
-	//int32_t edi = *reinterpret_cast<int32_t*>(reinterpret_cast<uint32_t>(_AddressOfReturnAddress()) + 4);
-	//printf("esp+4 address: 0x%08x\n", (uint32_t*)edi);
-	//printf("AAA:%s\n", (const char*)edi);
-
-	/*ignore first letter in case it is capitalized*/
-	if ((!strcmp((const char*)p_data+1, "b_scripts.prx") || !strcmp((const char*)p_data+1, "qb_scripts.pre")) && using_qbscripts) {
-			Log::TypedLog(CHN_MOD, "Successfully replaced %s with %s\n", (const char*)p_data, qb_scripts_for_injection);
-			p_data = (uint8_t*)qb_scripts_for_injection;
-	}
-	else if ((!strcmp((const char*)p_data+1, "nims.prx") || !strcmp((const char*)p_data+1, "nims.pre")) && using_anims) {
-			Log::TypedLog(CHN_MOD, "Successfully replaced %s with %s\n", (const char*)p_data, anims_for_injection);
-			p_data = (uint8_t*)anims_for_injection;
-	}
-	else if ((!strcmp((const char*)p_data+1, "etanims.prx") || !strcmp((const char*)p_data+1, "etanims.pre")) && using_netanims) {
-			Log::TypedLog(CHN_MOD, "Successfully replaced %s with %s\n", (const char*)p_data, netanims_for_injection);
-			p_data = (uint8_t*)netanims_for_injection;
-	}
-	LoadPre_Native(p_data);
-}
-
-
-typedef void (__thiscall* PreMgrLoadPre_NativeCall)(void* arg1, uint8_t* arg2, char* arg3, char* arg4, char arg5);
-PreMgrLoadPre_NativeCall PreMgrLoadPre = (PreMgrLoadPre_NativeCall)(0x005B8EE0);
-
-
-void __fastcall PreMgrLoadPre_Wrapper(void* arg1, void* unused, uint8_t* p_data, char* arg3, char* arg4, char arg5) {
-	//printf("uebergabeparameter: 0x%08x\n", arg1);
-	//printf("ALL: %s\n", (const char*)p_data);
-	
-	/*ignore first letter in case it is capitalized*/
-	if ((!strcmp((const char*)p_data + 1, "ainmenu_scripts.prx") || !strcmp((const char*)p_data + 1, "ainmenu_scripts.pre")) && using_mainmenu_scripts) {
-		Log::TypedLog(CHN_MOD, "Successfully replaced %s with %s\n", (const char*)p_data, mainmenu_scripts_for_injection);
-		p_data = (uint8_t*)mainmenu_scripts_for_injection;
-	}
-	/*
-	else if (!strcmp((const char*)p_data + 1, "anelsprites.prx") || !strcmp((const char*)p_data + 1, "anelsprites.pre")) {
-		printf("PANELSPRITES: %s\n", (const char*)p_data);
-		p_data = (uint8_t*)"BelaMod/bela_panelsprites.prx";
-	}
-	else if (!strcmp((const char*)p_data + 1, "ainmenu_scripts.prx") || !strcmp((const char*)p_data + 1, "ainmenu_scripts.pre")) {
-		printf("MAINMENU: %s\n", (const char*)p_data);
-		p_data = (uint8_t*)"BelaMod/e9_mainmenu_scripts.prx";
-	}
-	*/
-
-
-
-
-	/*
-	permtex.pre
-	casfiles.pre
-	skater_sounds.pre
-	skeletons.pre
-	bits.pre
-	fonts.pre
-	panelsprites.pre
-	Themes.pre
-	mainmenuscn.pre
-	mainmenu_scripts.pre
-	mainmenusprites.pre
-	multiplayersprites.pre
-	skaterparts.pre
-	skaterparts_temp.pre
-	cagpieces.pre
-	*/
-	
-	PreMgrLoadPre(arg1, p_data, arg3, arg4, arg5);
-	
-}
-
-void initMod()
-{
-	GetPrivateProfileString(MOD_SECTION, "Folder", "", modfolder, sizeof(modfolder), configFile);
-	if (usemod)
-	{
-		/*check if modfolder was specified in partymod.ini. Folders are specified relative to the game directory (data\pre\mymod)*/
-		if (strlen(modfolder))
-		{
-			/*maybe replace forward slashes with backslashes*/
-			for (int i = 0; i < strlen(modfolder); ++i) {
-				if (modfolder[i] == '/') {
-					modfolder[i] = '\\';
-				}
-			}
-
-			/*get full path to modfolder*/
-			sprintf_s(full_modfolder, "%s%s", (char*)executableDirectory, modfolder);
-		
-			Log::TypedLog(CHN_MOD, "Trying to load files from specified mod folder: %s\n", modfolder);
-			/*check if specified mod folder exists on hard drive*/
-			stat(full_modfolder, &info);
-			if (info.st_mode & S_IFDIR)
-				Log::TypedLog(CHN_MOD, "Found mod folder: %s\n", full_modfolder);
-			else {
-				Log::TypedLog(CHN_MOD, "ERROR: Mod folder doesn\'t exist!\n", full_modfolder); return;
-			}
-
-			/*get full path of mod.ini file*/
-			sprintf(ini_file, "%s%s", full_modfolder, "\\mod.ini");
-
-			/*check if mod.ini file exists on hard drive*/
-			std::ifstream infile_ini(ini_file);
-			if (infile_ini.good())
-				Log::TypedLog(CHN_MOD, "Found mod.ini!\n");
-			else {
-				Log::TypedLog(CHN_MOD, "ERROR: Mod folder doesn\'t contain a mod.ini\n"); return;
-			}
-
-			GetPrivateProfileString("MODINFO", "Name", "UNDEFINED", modname, sizeof(modname), ini_file);
-			Log::TypedLog(CHN_MOD, "Attempting to load mod: %s\n", modname);
-
-			/*check if modded files exists as defined in mod.ini*/
-			char* lastSlash = strrchr(modfolder, '\\'); /*lastSlash+1 has the last word of a path (e.g. mymod in data\mod\pre\mymod)*/
-
-			GetPrivateProfileString("MODINFO", "qb_scripts.prx", "UNDEFINED", qbscripts_from_mod, sizeof(qbscripts_from_mod), ini_file); /*get info from mod.ini: get the new qb_scripts.prx filename*/
-			if (strcmp((const char*)qbscripts_from_mod, "UNDEFINED")) { /*only check for the file if it was specified in mod.ini*/
-				sprintf_s(full_qbscripts_from_mod, "%s%s%s", full_modfolder, "\\", qbscripts_from_mod); /*check if file exists on hard drive*/
-				std::ifstream infile_qb_scripts(full_qbscripts_from_mod);
-				if (infile_qb_scripts.good()) {
-					Log::TypedLog(CHN_MOD, "Found modded qb_scripts! File: %s\n", qbscripts_from_mod);
-					sprintf_s(qb_scripts_for_injection, "%s%s%s", lastSlash + 1, "/", qbscripts_from_mod); /*generate injection string, this will be passed to LoadPre*/
-				}
-				else {
-					Log::TypedLog(CHN_MOD, "ERROR: Couldn\'t find modded qb_scripts!\n");
-					filemissing = TRUE;
-				}
-			}
-			else { /*if the file was not defined, it won't be loaded in the LoadPre wrapper*/
-				using_qbscripts = FALSE;
-			}
-
-			GetPrivateProfileString("MODINFO", "anims.prx", "UNDEFINED", anims_from_mod, sizeof(anims_from_mod), ini_file);
-			if (strcmp((const char*)anims_from_mod, "UNDEFINED")) {
-				sprintf_s(full_anims_from_mod, "%s%s%s", full_modfolder, "\\", anims_from_mod);
-				std::ifstream infile_anims(full_anims_from_mod);
-				if (infile_anims.good()) {
-					Log::TypedLog(CHN_MOD, "Found modded anims! File: %s\n", anims_from_mod);
-					sprintf_s(anims_for_injection, "%s%s%s", lastSlash + 1, "/", anims_from_mod);
-				}
-				else {
-					Log::TypedLog(CHN_MOD, "ERROR: Couldn\'t find modded anims!\n");
-					filemissing = TRUE;
-				}
-			}
-			else {
-				using_anims = FALSE;
-			}
-
-			GetPrivateProfileString("MODINFO", "netanims.prx", "UNDEFINED", netanims_from_mod, sizeof(netanims_from_mod), ini_file);
-			if (strcmp((const char*)netanims_from_mod, "UNDEFINED")) {
-				sprintf_s(full_netanims_from_mod, "%s%s%s", full_modfolder, "\\", netanims_from_mod);
-				std::ifstream infile_netanims(full_netanims_from_mod);
-				if (infile_netanims.good()) {
-					Log::TypedLog(CHN_MOD, "Found modded netanims! File: %s\n", netanims_from_mod);
-					sprintf_s(netanims_for_injection, "%s%s%s", lastSlash + 1, "/", netanims_from_mod);
-				}
-				else {
-					Log::TypedLog(CHN_MOD, "ERROR: Couldn\'t find modded netanims!\n");
-					filemissing = TRUE;
-				}
-			}
-			else {
-				using_netanims = FALSE;
-			}
-
-			GetPrivateProfileString("MODINFO", "mainmenu_scripts.prx", "UNDEFINED", mainmenu_scripts_from_mod, sizeof(mainmenu_scripts_from_mod), ini_file);
-			if (strcmp((const char*)mainmenu_scripts_from_mod, "UNDEFINED")) {
-				sprintf_s(full_mainmenu_scripts_from_mod, "%s%s%s", full_modfolder, "\\", mainmenu_scripts_from_mod);
-				std::ifstream infile_mainemenu_scripts(full_mainmenu_scripts_from_mod);
-				if (infile_mainemenu_scripts.good()) {
-					Log::TypedLog(CHN_MOD, "Found modded mainmenu_scripts! File: %s\n", mainmenu_scripts_from_mod);
-					sprintf_s(mainmenu_scripts_for_injection, "%s%s%s", lastSlash + 1, "/", mainmenu_scripts_from_mod);
-				}
-				else {
-					Log::TypedLog(CHN_MOD, "ERROR: Couldn\'t find modded mainmenu_scripts!\n");
-					filemissing = TRUE;
-				}
-			}
-			else {
-				using_mainmenu_scripts = FALSE;
-			}
-
-			if (filemissing) {
-				Log::TypedLog(CHN_MOD, "ERROR: Missing files defined in mod.ini\n"); return;
-			}
-		}
-		else {
-			Log::TypedLog(CHN_MOD, "ERROR: No mod folder specified!\n"); return;
-		}
-		patchCall((void*)0x005A59FB, LoadPre_Wrapper);
-		patchCall((void*)0x005B7ADE, LoadPre_Wrapper);
-		patchCall((void*)0x005B94F7, PreMgrLoadPre_Wrapper);
 	}
 }

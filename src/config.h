@@ -10,10 +10,18 @@
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_syswm.h"
 #include "input.h"
+#include "modloader.h"
 #include "QB/LazyStruct.h"
 #include "QB/Qb.h"
 #include "QB/script.h"
 #include "QB/CFuncs.h"
+
+#include <sys/stat.h>
+#include <string>
+#include <fstream>
+#include <iostream>
+#include <sys/stat.h>
+#include <cctype>
 
 void InitInstance(HANDLE hModule);
 void LoadOriginalDll(void);
@@ -140,6 +148,13 @@ struct scriptsettings {
 	uint8_t quickgetup;
 };
 
+struct modsettings {
+	bool usemod;
+	char* configfile;
+	char* workingdir;
+	char* windowtitle;
+};
+
 struct flashVertex {
 	float x, y, z, w;
 	uint32_t color;
@@ -166,6 +181,7 @@ void patch_button_font(uint8_t sel);
 float getScreenAngleFactor();
 float getaspectratio();
 void loadScriptSettings(struct scriptsettings* scriptsettingsOut);
+void loadModSettings(struct modsettings* modsettingsOut);
 void getConfigFilePath(char mConfigFile[MAX_PATH]);
 void wallrideanywhere_patch();
 void WalkCamComponent_Update_Hook();
