@@ -5,7 +5,6 @@
 
 
 bool getModIni();
-void initMod_temp();
 void initMod();
 void getWindowTitle(struct modsettings* modsettingsOut);
 void PIPLoadPre_Wrapper(uint8_t* p_data);

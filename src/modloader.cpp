@@ -8,24 +8,7 @@ char modname[30];
 char modfolder[MAX_PATH];
 char full_modfolder[MAX_PATH];
 char ini_file[MAX_PATH];
-char qbscripts_from_mod[30];
-char anims_from_mod[30];
-char netanims_from_mod[30];
-char full_qbscripts_from_mod[MAX_PATH];
-char full_anims_from_mod[MAX_PATH];
-char full_netanims_from_mod[MAX_PATH];
-char qb_scripts_for_injection[60];
-char anims_for_injection[60];
-char netanims_for_injection[60];
 bool filemissing = FALSE;
-bool using_qbscripts = TRUE;
-bool using_anims = TRUE;
-bool using_netanims = TRUE;
-bool using_mainmenu_scripts = TRUE;
-char mainmenu_scripts_from_mod[30];
-char full_mainmenu_scripts_from_mod[MAX_PATH];
-char mainmenu_scripts_for_injection[60];
-
 char to_be_injected[60];
 
 typedef void __cdecl PIPLoadPre_NativeCall(uint8_t* p_data);
@@ -154,6 +137,7 @@ std::unordered_set<std::string> all_pre_files() {
 		"unloadableanims",
 	};
 }
+
 std::vector<std::string> mmoddedFileNames_original;
 std::vector<std::string> mmoddedFileNames_modded;
 std::map<std::string, std::string> fileNameMapping;
@@ -200,7 +184,10 @@ void generateModdedFileVector(std::vector<std::string>& mmoddedFileNames_origina
 			mmoddedFileNames_original.push_back(key);
 		}
 		else {
-			Log::TypedLog(CHN_MOD, "Invalid key found: %s\n", key.c_str());
+			if (key != "Name") {
+				Log::TypedLog(CHN_MOD, "Invalid key found: %s\n", key.c_str());
+				filemissing = TRUE;
+			}
 		}
 	}
 	iniFile.close();
@@ -259,13 +246,14 @@ void getModdedFileName(char* filename)
 
 	sprintf_s(filename_prx, "%s%s", filename, ".prx");
 
-	GetPrivateProfileString("MODINFO", filename_prx, "UNDEFINED", a, sizeof(a), ini_file); // get info from mod.ini: get the new qb_scripts.prx filename
+	// get info from mod.ini: get the new qb_scripts.prx filename
+	GetPrivateProfileString("MODINFO", filename_prx, "UNDEFINED", a, sizeof(a), ini_file); 
 
 
 	if (strcmp((const char*)a, "UNDEFINED") && strlen(a)) {
-		printf("FILENAME: %s -- AAA: %s\n", filename_prx, a);
+		//printf("FILENAME: %s -- AAA: %s\n", filename_prx, a);
 		sprintf_s(b, "%s%s%s", full_modfolder, "\\", a); // check if file exists on hard drive
-		printf("CHECK: %s\n", b);
+		//printf("CHECK: %s\n", b);
 		std::ifstream infile(b);
 		if (infile.good()) {
 			Log::TypedLog(CHN_MOD, "Found modded file: %s\n", a);
@@ -274,89 +262,92 @@ void getModdedFileName(char* filename)
 			mmoddedFileNames_modded.push_back(to_be_injected);
 		}
 		else {
-			Log::TypedLog(CHN_MOD, "ERROR: Couldn\'t find modded qb_scripts!\n");
+			Log::TypedLog(CHN_MOD, "ERROR: Couldn\'t find modded file on hard drive: %s\n", a);
 			filemissing = TRUE;
 		}
 
 	}
-	else { // if the file was not defined, it won't be loaded in the LoadPre wrapper
-		using_qbscripts = FALSE;
+	else {
+		// If files can't be found or were specified incorrectly, no PRE loading functions will be patched
+		Log::TypedLog(CHN_MOD, "ERROR: Invalid file specified for: %s\n", filename_prx);
+		filemissing = TRUE;
 	}
 }
-
 
 void PIPLoadPre_Wrapper(uint8_t* p_data)
 {
-	//printf("uebergabeparameter: 0x%08x\n", p_data);
-	printf("text: %s\n", (const char*)p_data);
-
-	//int32_t edi = *reinterpret_cast<int32_t*>(reinterpret_cast<uint32_t>(_AddressOfReturnAddress()) + 4);
-	//printf("esp+4 address: 0x%08x\n", (uint32_t*)edi);
-	//printf("AAA:%s\n", (const char*)edi);
-
-	//ignore first letter in case it is capitalized
-	printf("ZZINSIDE PIP LOAD PRE WITH %s\n", mmoddedFileNames_original[0].c_str());
-
-	// Create mapping, this could be done once prior to all wrapper-calls. Maybe working with a map directly? TODO!
-
-	// Ensure the vectors have the same length
-	if (mmoddedFileNames_original.size() != mmoddedFileNames_modded.size()) {
-		std::cerr << "Vectors are not of the same length!" << std::endl;
-	}
-
-	// Create the mapping using std::map
-	std::map<std::string, std::string> fileNameMapping;
-	for (size_t i = 0; i < mmoddedFileNames_original.size(); ++i) {
-		fileNameMapping[mmoddedFileNames_original[i]] = mmoddedFileNames_modded[i];
-	}
-
-	//for (const auto& pair : fileNameMapping) {
-	//	printf("%s -> %s\n", pair.first.c_str(), pair.second.c_str());
-	//}
-
 	for (const auto& pair : fileNameMapping)
-	{ 
-		printf("COMPARING: %s with %s\m", (const char*)p_data + 1, pair.first.c_str() + 1);
-		if (strncmp((const char*)p_data+1, pair.first.c_str() + 1, strlen((const char*)p_data) - 5) == 0) // Compare the original data pointer with our files (without the ending and without the first letter to account for capital first letters)
+	{
+		//printf("COMPARING: %s with %s\n", (const char*)p_data + 1, pair.first.c_str() + 1);
+		if (strncmp((const char*)p_data + 1, pair.first.c_str() + 1, strlen((const char*)p_data) - 5) == 0) // Compare the original data pointer with our files (without the ending and without the first letter to account for capital first letters)
 		{
-			printf("OHNO\n");
-			p_data = (uint8_t*)pair.second.c_str(); // Mapping orignal to modded file here TODO!1
+			Log::TypedLog(CHN_MOD, "Successfully replaced %s with %s\n", (const char*)p_data, pair.second.c_str());
+			p_data = (uint8_t*)pair.second.c_str();
 		}
 	}
-
-	
-
-
-	//if ((!strcmp((const char*)p_data + 1, "b_scripts.prx") || !strcmp((const char*)p_data + 1, "b_scripts.pre")) && using_qbscripts) {
-	//	Log::TypedLog(CHN_MOD, "Successfully replaced %s with %s\n", (const char*)p_data, qb_scripts_for_injection);
-	//	p_data = (uint8_t*)qb_scripts_for_injection;
-	//}
-	
 	PIPLoadPre_Native(p_data);
 }
 
-void initMod_temp()
+void __fastcall PreMgrLoadPre_Wrapper(void* arg1, void* unused, uint8_t* p_data, char* arg3, char* arg4, char arg5) {
+	
+	//printf("ALL: %s\n", (const char*)p_data);
+	for (const auto& pair : fileNameMapping)
+	{
+		if (strncmp((const char*)p_data + 1, pair.first.c_str() + 1, strlen((const char*)p_data) - 5) == 0) // Compare the original data pointer with our files (without the ending and without the first letter to account for capital first letters)
+		{
+			Log::TypedLog(CHN_MOD, "Successfully replaced %s with %s\n", (const char*)p_data, pair.second.c_str());
+			p_data = (uint8_t*)pair.second.c_str();
+		}
+	}
+	PreMgrLoadPre(arg1, p_data, arg3, arg4, arg5);
+}
+
+void getWindowTitle(struct modsettings* modsettingsOut)
 {
+	modsettingsOut->windowtitle = modname;
+}
+
+void initMod()
+{
+	// Get info to determine if the mod loader is active. Also get handles to partymod.ini, the game's directory and the window title
+	// The info is stored in the mModsettings struct
 	loadModSettings(&mModsettings);
 
 	// Only load mods if it's activated in the ini
 	if (mModsettings.usemod) {
 
 		// Check if modfolder and mod.ini are valid
+		// When successful, we have a handle to the specified mod.ini and the mod folder. The mod name will also be passed to the window title bar
 		if (getModIni()) {
-			printf("GOOD\n");
+			
+			// Check the contents of mod.ini and verify valid file names (checked against all_pre_files vector)
 			generateModdedFileVector(mmoddedFileNames_original);
 
 			// Go through mod.ini and get all modded file names and put it into mmoddedFileNames_modded
 			for (const auto& entry : mmoddedFileNames_original)
 				getModdedFileName((char*)(entry.c_str()));
 			
+			if (!filemissing)
+			{
+				// Ensure the vectors have the same length
+				if (mmoddedFileNames_original.size() != mmoddedFileNames_modded.size()) {
+					Log::TypedLog(CHN_MOD, "Vectors are not of the same length!\n"); return;
+				}
 
+				// Create the mapping using std::map
+				for (size_t i = 0; i < mmoddedFileNames_original.size(); ++i) {
+					fileNameMapping[mmoddedFileNames_original[i]] = mmoddedFileNames_modded[i];
+				}
 
+				// Patch PRE loading functions when everything was initialized correctly
+				patchCall((void*)0x005A59FB, PIPLoadPre_Wrapper);
+				patchCall((void*)0x005B7ADE, PIPLoadPre_Wrapper);
+				patchCall((void*)0x005B94F7, PreMgrLoadPre_Wrapper);
+				Log::TypedLog(CHN_MOD, "Patching PIP::LoadPre and PreMgr::LoadPre\n");
+			}
 		}
 	}
 
-	
 	/*
 	for (auto& pair : fileNameMapping) {
 		printf("std::map contents: %s -> %s\n", pair.first.c_str(), pair.second.c_str());
@@ -369,207 +360,43 @@ void initMod_temp()
 	for (const auto& entry : mmoddedFileNames_modded) {
 		std::cout << "HERE: " << entry << std::endl;
 	}
+
+	for (const auto& entry : mmoddedFileNames_original) {
+		std::cout << "ORIGINAL: " << entry << std::endl;
+	}
+
+	for (const auto& entry : mmoddedFileNames_modded) {
+		std::cout << "MODDED: " << entry << std::endl;
+	}
 	*/
-	patchCall((void*)0x005A59FB, PIPLoadPre_Wrapper);
-	patchCall((void*)0x005B7ADE, PIPLoadPre_Wrapper);
+	
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void initMod()
-{
-	loadModSettings(&mModsettings);
-	if (mModsettings.usemod)
-	{
-		/*check if modfolder was specified in partymod.ini. Folders are specified relative to the game directory (data\pre\mymod)*/
-		
-		GetPrivateProfileString(MOD_SECTION, "Folder", "", modfolder, sizeof(modfolder), mModsettings.configfile);
-		if (strlen(modfolder))
-		{
-			/*maybe replace forward slashes with backslashes*/
-			for (int i = 0; i < strlen(modfolder); ++i) {
-				if (modfolder[i] == '/') {
-					modfolder[i] = '\\';
-				}
-			}
-
-			/*get full path to modfolder*/
-			sprintf_s(full_modfolder, "%s%s", mModsettings.workingdir, modfolder);
-
-			Log::TypedLog(CHN_MOD, "Trying to load files from specified mod folder: %s\n", modfolder);
-			/*check if specified mod folder exists on hard drive*/
-			stat(full_modfolder, &info);
-			if (info.st_mode & S_IFDIR)
-				Log::TypedLog(CHN_MOD, "Found mod folder: %s\n", full_modfolder);
-			else {
-				Log::TypedLog(CHN_MOD, "ERROR: Mod folder doesn\'t exist!\n", full_modfolder); return;
-			}
-
-			/*get full path of mod.ini file*/
-			sprintf(ini_file, "%s%s", full_modfolder, "\\mod.ini");
-
-			/*check if mod.ini file exists on hard drive*/
-			std::ifstream infile_ini(ini_file);
-			if (infile_ini.good())
-				Log::TypedLog(CHN_MOD, "Found mod.ini!\n");
-			else {
-				Log::TypedLog(CHN_MOD, "ERROR: Mod folder doesn\'t contain a mod.ini\n"); return;
-			}
-
-			GetPrivateProfileString("MODINFO", "Name", "UNDEFINED", modname, sizeof(modname), ini_file);
-			Log::TypedLog(CHN_MOD, "Attempting to load mod: %s\n", modname);
-
-			/*check if modded files exist as defined in mod.ini*/
-			char* lastSlash = strrchr(modfolder, '\\'); /*lastSlash+1 has the last word of a path (e.g. mymod in data\mod\pre\mymod)*/
-
-			GetPrivateProfileString("MODINFO", "qb_scripts.prx", "UNDEFINED", qbscripts_from_mod, sizeof(qbscripts_from_mod), ini_file); /*get info from mod.ini: get the new qb_scripts.prx filename*/
-			if (strcmp((const char*)qbscripts_from_mod, "UNDEFINED")) { /*only check for the file if it was specified in mod.ini*/
-				sprintf_s(full_qbscripts_from_mod, "%s%s%s", full_modfolder, "\\", qbscripts_from_mod); /*check if file exists on hard drive*/
-				std::ifstream infile_qb_scripts(full_qbscripts_from_mod);
-				if (infile_qb_scripts.good()) {
-					Log::TypedLog(CHN_MOD, "Found modded qb_scripts! File: %s\n", qbscripts_from_mod);
-					sprintf_s(qb_scripts_for_injection, "%s%s%s", lastSlash + 1, "/", qbscripts_from_mod); /*generate injection string, this will be passed to LoadPre*/
-				}
-				else {
-					Log::TypedLog(CHN_MOD, "ERROR: Couldn\'t find modded qb_scripts!\n");
-					filemissing = TRUE;
-				}
-			}
-			else { /*if the file was not defined, it won't be loaded in the LoadPre wrapper*/
-				using_qbscripts = FALSE;
-			}
-
-			GetPrivateProfileString("MODINFO", "anims.prx", "UNDEFINED", anims_from_mod, sizeof(anims_from_mod), ini_file);
-			if (strcmp((const char*)anims_from_mod, "UNDEFINED")) {
-				sprintf_s(full_anims_from_mod, "%s%s%s", full_modfolder, "\\", anims_from_mod);
-				std::ifstream infile_anims(full_anims_from_mod);
-				if (infile_anims.good()) {
-					Log::TypedLog(CHN_MOD, "Found modded anims! File: %s\n", anims_from_mod);
-					sprintf_s(anims_for_injection, "%s%s%s", lastSlash + 1, "/", anims_from_mod);
-				}
-				else {
-					Log::TypedLog(CHN_MOD, "ERROR: Couldn\'t find modded anims!\n");
-					filemissing = TRUE;
-				}
-			}
-			else {
-				using_anims = FALSE;
-			}
-
-			GetPrivateProfileString("MODINFO", "netanims.prx", "UNDEFINED", netanims_from_mod, sizeof(netanims_from_mod), ini_file);
-			if (strcmp((const char*)netanims_from_mod, "UNDEFINED")) {
-				sprintf_s(full_netanims_from_mod, "%s%s%s", full_modfolder, "\\", netanims_from_mod);
-				std::ifstream infile_netanims(full_netanims_from_mod);
-				if (infile_netanims.good()) {
-					Log::TypedLog(CHN_MOD, "Found modded netanims! File: %s\n", netanims_from_mod);
-					sprintf_s(netanims_for_injection, "%s%s%s", lastSlash + 1, "/", netanims_from_mod);
-				}
-				else {
-					Log::TypedLog(CHN_MOD, "ERROR: Couldn\'t find modded netanims!\n");
-					filemissing = TRUE;
-				}
-			}
-			else {
-				using_netanims = FALSE;
-			}
-
-			GetPrivateProfileString("MODINFO", "mainmenu_scripts.prx", "UNDEFINED", mainmenu_scripts_from_mod, sizeof(mainmenu_scripts_from_mod), ini_file);
-			if (strcmp((const char*)mainmenu_scripts_from_mod, "UNDEFINED")) {
-				sprintf_s(full_mainmenu_scripts_from_mod, "%s%s%s", full_modfolder, "\\", mainmenu_scripts_from_mod);
-				std::ifstream infile_mainemenu_scripts(full_mainmenu_scripts_from_mod);
-				if (infile_mainemenu_scripts.good()) {
-					Log::TypedLog(CHN_MOD, "Found modded mainmenu_scripts! File: %s\n", mainmenu_scripts_from_mod);
-					sprintf_s(mainmenu_scripts_for_injection, "%s%s%s", lastSlash + 1, "/", mainmenu_scripts_from_mod);
-				}
-				else {
-					Log::TypedLog(CHN_MOD, "ERROR: Couldn\'t find modded mainmenu_scripts!\n");
-					filemissing = TRUE;
-				}
-			}
-			else {
-				using_mainmenu_scripts = FALSE;
-			}
-
-			if (filemissing) {
-				Log::TypedLog(CHN_MOD, "ERROR: Missing files defined in mod.ini\n"); return;
-			}
-		}
-		else {
-			Log::TypedLog(CHN_MOD, "ERROR: No mod folder specified!\n"); return;
-		}
-		patchCall((void*)0x005A59FB, PIPLoadPre_Wrapper);
-		patchCall((void*)0x005B7ADE, PIPLoadPre_Wrapper);
-		patchCall((void*)0x005B94F7, PreMgrLoadPre_Wrapper);
-		
-	}
-}
-
-void getWindowTitle(struct modsettings* modsettingsOut)
-{
-	modsettingsOut->windowtitle = modname;
-}
-/*
-void PIPLoadPre_Wrapper(uint8_t* p_data)
-{
-	//printf("uebergabeparameter: 0x%08x\n", p_data);
-	//printf("text: %s\n", (const char*)p_data);
-
-	//int32_t edi = *reinterpret_cast<int32_t*>(reinterpret_cast<uint32_t>(_AddressOfReturnAddress()) + 4);
-	//printf("esp+4 address: 0x%08x\n", (uint32_t*)edi);
-	//printf("AAA:%s\n", (const char*)edi);
-
-	//ignore first letter in case it is capitalized
-	if ((!strcmp((const char*)p_data + 1, "b_scripts.prx") || !strcmp((const char*)p_data + 1, "b_scripts.pre")) && using_qbscripts) {
-		Log::TypedLog(CHN_MOD, "Successfully replaced %s with %s\n", (const char*)p_data, qb_scripts_for_injection);
-		p_data = (uint8_t*)qb_scripts_for_injection;
-	}
-	else if ((!strcmp((const char*)p_data + 1, "nims.prx") || !strcmp((const char*)p_data + 1, "nims.pre")) && using_anims) {
-		Log::TypedLog(CHN_MOD, "Successfully replaced %s with %s\n", (const char*)p_data, anims_for_injection);
-		p_data = (uint8_t*)anims_for_injection;
-	}
-	else if ((!strcmp((const char*)p_data + 1, "etanims.prx") || !strcmp((const char*)p_data + 1, "etanims.pre")) && using_netanims) {
-		Log::TypedLog(CHN_MOD, "Successfully replaced %s with %s\n", (const char*)p_data, netanims_for_injection);
-		p_data = (uint8_t*)netanims_for_injection;
-	}
-	PIPLoadPre_Native(p_data);
-}
-*/
-void __fastcall PreMgrLoadPre_Wrapper(void* arg1, void* unused, uint8_t* p_data, char* arg3, char* arg4, char arg5) {
-		//printf("uebergabeparameter: 0x%08x\n", arg1);
-		printf("ALL: %s\n", (const char*)p_data);
-
-		//ignore first letter in case it is capitalized
-		if ((!strcmp((const char*)p_data + 1, "ainmenu_scripts.prx") || !strcmp((const char*)p_data + 1, "ainmenu_scripts.pre")) && using_mainmenu_scripts) {
-			Log::TypedLog(CHN_MOD, "Successfully replaced %s with %s\n", (const char*)p_data, mainmenu_scripts_for_injection);
-			p_data = (uint8_t*)mainmenu_scripts_for_injection;
-		}
-
-	//else if (!strcmp((const char*)p_data + 1, "anelsprites.prx") || !strcmp((const char*)p_data + 1, "anelsprites.pre")) {
-	//	printf("PANELSPRITES: %s\n", (const char*)p_data);
-	//	p_data = (uint8_t*)"BelaMod/bela_panelsprites.prx";
-	//}
-	//else if (!strcmp((const char*)p_data + 1, "ainmenu_scripts.prx") || !strcmp((const char*)p_data + 1, "ainmenu_scripts.pre")) {
-	//	printf("MAINMENU: %s\n", (const char*)p_data);
-	//	p_data = (uint8_t*)"BelaMod/e9_mainmenu_scripts.prx";
-	//}
 
 /*
-		
+
+In partymod.ini, you can activate and define mods like this:
+```
+[AdditionalMods]
+UseMod=1
+Folder=data/pre/mymod
+```
+
+As seen by the folder value, you place mod contents inside your mod folder at C:\<thug2-install-path>\Game\Data\pre\myanmod
+The folder needs a mod.ini so the contents can be loaded properly. It can look like this:
+```
+[MODINFO]
+Name=Mymod
+qb_scripts.prx=modded_scripts.prx
+anims.prx=modded_anims.prx
+```
+
+Note that the file names on the left are the original names of THUG2 scripts you're replacing. The modded files have to be inside the mod folder alongside the mod.ini file.
+Also, file endings are needed here.
+
+When activated, the game will perform various checks when launching the game so make sure the folder and files exists as specified. If everything was loaded correclty, the window title will contain the loaded mod name.
+
 */
 
-	PreMgrLoadPre(arg1, p_data, arg3, arg4, arg5);
 
-}
+

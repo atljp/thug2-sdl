@@ -128,30 +128,30 @@ void addplayer(SDL_GameController* controller) {
 			numplayers++;
 
 			players[i].lockedOut = 1;
-			printf("Added player %d: %s\n", i + 1, SDL_GameControllerName(controller));
+			Log::TypedLog(CHN_SDL, "Added player %d: %s\n", i + 1, SDL_GameControllerName(controller));
 
 			SDL_JoystickRumble(SDL_GameControllerGetJoystick(controller), 0xffff, 0xffff, 250);
 		}
 	}
 	else {
-		printf("Already two players, not adding\n");
+		Log::TypedLog(CHN_SDL, "Already two players, not adding\n");
 	}
 }
 
 void pruneplayers() {
 	for (int i = 0; i < MAX_PLAYERS; i++) {
 		if (players[i].controller && !SDL_GameControllerGetAttached(players[i].controller)) {
-			printf("Pruned player %d\n", i + 1);
+			Log::TypedLog(CHN_SDL, "Pruned player %d\n", i + 1);
 
 			players[i].controller = NULL;
 			numplayers--;
-			printf("Remaining players: %d\n", numplayers);
+			Log::TypedLog(CHN_SDL, "Remaining players: %d\n", numplayers);
 		}
 	}
 }
 
 void removeController(SDL_GameController* controller) {
-	printf("Controller \"%s\" disconnected\n", SDL_GameControllerName(controller));
+	Log::TypedLog(CHN_SDL, "Controller \"%s\" disconnected\n", SDL_GameControllerName(controller));
 
 	int i = 0;
 
@@ -164,7 +164,7 @@ void removeController(SDL_GameController* controller) {
 
 		int playerIdx = SDL_GameControllerGetPlayerIndex(controller);
 		if (playerIdx != -1) {
-			printf("Removed player %d\n", playerIdx + 1);
+			Log::TypedLog(CHN_SDL, "Removed player %d\n", playerIdx + 1);
 			players[playerIdx].controller = NULL;
 			numplayers--;
 		}
@@ -178,12 +178,12 @@ void removeController(SDL_GameController* controller) {
 	}
 	else {
 		//setActiveController(NULL);
-		printf("Did not find disconnected controller in list\n");
+		Log::TypedLog(CHN_SDL, "Did not find disconnected controller in list\n");
 	}
 }
 
 void initSDLControllers() {
-	printf("Initializing Controller Input\n");
+	Log::TypedLog(CHN_SDL, "Initializing Controller Input\n");
 
 	controllerCount = 0;
 	controllerListSize = 1;
@@ -193,7 +193,7 @@ void initSDLControllers() {
 	for (int i = 0; i < SDL_NumJoysticks(); i++) {
 		if (SDL_IsGameController(i)) {
 			addController(i);
-			if (!(detected)) printf("Detected controller \"%s\"\n", SDL_GameControllerNameForIndex(i));
+			if (!(detected)) Log::TypedLog(CHN_SDL, "Detected controller \"%s\"\n", SDL_GameControllerNameForIndex(i));
 			detected = 1;
 		}
 	}
@@ -1016,23 +1016,23 @@ void processEvent(SDL_Event* e) {
 	switch (e->type) {
 	case SDL_CONTROLLERDEVICEADDED:
 		if (SDL_IsGameController(e->cdevice.which)) {
-			printf("Adding controller: %d\n", e->cdevice.which);
+			Log::TypedLog(CHN_SDL, "Adding controller: %d\n", e->cdevice.which);
 			addController(e->cdevice.which);
 		}
 		else {
-			printf("Not a game controller: %s\n", SDL_JoystickNameForIndex(e->cdevice.which));
+			Log::TypedLog(CHN_SDL, "Not a game controller: %s\n", SDL_JoystickNameForIndex(e->cdevice.which));
 		}
 		return;
 	case SDL_CONTROLLERDEVICEREMOVED: {
 		SDL_GameController* controller = SDL_GameControllerFromInstanceID(e->cdevice.which);
 		if (controller) {
-			printf("Removed controller\n");
+			Log::TypedLog(CHN_SDL, "Removed controller\n");
 			removeController(controller);
 		}
 		return;
 	}
 	case SDL_JOYDEVICEADDED:
-		printf("Joystick added: %s\n", SDL_JoystickNameForIndex(e->jdevice.which));
+		Log::TypedLog(CHN_SDL, "Joystick added: %s\n", SDL_JoystickNameForIndex(e->jdevice.which));
 		return;
 	case SDL_KEYDOWN:
 		//printf("KEY: %s\n", SDL_GetKeyName(e->key.keysym.sym));
@@ -1244,10 +1244,10 @@ void __stdcall initManager() {
 	if (result) {
 		result = SDL_GameControllerAddMappingsFromFile(controllerDbPath);
 		if (result) {
-			printf("Loaded mappings\n");
+			Log::TypedLog(CHN_SDL, "Loaded mappings\n");
 		}
 		else {
-			printf("Failed to load %s\n", controllerDbPath);
+			Log::TypedLog(CHN_SDL, "Failed to load %s\n", controllerDbPath);
 		}
 
 	}
@@ -1281,7 +1281,7 @@ void __stdcall initManager() {
 }
 
 void patchPs2Buttons() {
-	printf("Patching PS2 Buttons\n");
+	Log::TypedLog(CHN_SDL, "Patching PS2 Buttons\n");
 	patchByte((void*)(0x0051F4C6 + 2), 0x05);	// change PC platform to gamecube.  this just makes it default to ps2 controls. needed for rail DD on R2
 
 	// walk acid drop.

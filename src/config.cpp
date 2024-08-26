@@ -371,7 +371,8 @@ void createSDLWindow() {
 
 	if (usemod) {
 		getWindowTitle(&windowtitle_maybe);
-		if (strlen(windowtitle_maybe.windowtitle)) sprintf_s(window_title, "%s%s%s%s", window_title, " (", windowtitle_maybe.windowtitle, ")");
+		if (strlen(windowtitle_maybe.windowtitle))
+			sprintf_s(window_title, "%s%s%s%s", window_title, " (", windowtitle_maybe.windowtitle, ")");
 	}
 	window = SDL_CreateWindow(window_title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, resX, resY, flags);   // TODO: move / resize borderless window
 	SDL_SetWindowResizable(window, SDL_TRUE);
