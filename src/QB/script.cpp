@@ -55,9 +55,6 @@ AddChecksumName_NativeCall* AddChecksumName_Native = (AddChecksumName_NativeCall
 typedef uint32_t* __cdecl CSymbolTableEntryResolve_NativeCall(uint32_t checksum);
 CSymbolTableEntryResolve_NativeCall* CSymbolTableEntryResolve_Native = (CSymbolTableEntryResolve_NativeCall*)(0x00478CF0);
 
-typedef void ParseQB_NativeCall(const char* p_fileName, uint8_t* p_qb, int ecx, int assertIfDuplicateSymbols, bool allocateChecksumNameLookupTable);
-ParseQB_NativeCall* ParseQB_Native = (ParseQB_NativeCall*)(0x00472420);
-
 typedef uint32_t __cdecl ScriptGetArray_NativeCall(uint32_t partChecksum);
 ScriptGetArray_NativeCall* ScriptGetArray_Native = (ScriptGetArray_NativeCall*)(0x00478CC0);
 
@@ -354,16 +351,6 @@ void LookUpSymbol_Patched(uint32_t checksum)
 	CSymbolTableEntryResolve_Native(checksum);
 }
 
-void ParseQB_Patched(const char *p_fileName, uint8_t *p_qb, int unused, int assertIfDuplicateSymbols, bool allocateChecksumNameLookupTable)
-{
-	if (!strcmp(p_fileName, "scripts\\game\\game.qb")) {
-		ParseQB_Native(p_fileName, (uint8_t*)&game_new, 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
-	}
-	else {
-		ParseQB_Native(p_fileName, p_qb, 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
-	}
-}
-
 uint32_t __fastcall removeScript(uint32_t partChecksum)
 {	
 	uint32_t p_script = 0;
@@ -392,7 +379,7 @@ void loadScripts()
 {
 	/* qb data in scriptcontent.h */
 
-	removeScript(0x3B4548B8); /* POC */
+	removeScript(0x3B4548B8); /* longer text input */
 	uint32_t contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)enter_kb_chat_new);
 	sCreateScriptSymbolWrapper(0x9E, (uint8_t*)enter_kb_chat_new, 0x3B4548B8, contentsChecksum, "scripts\\game\\game.qb");
 
@@ -540,7 +527,6 @@ void patchScripts()
 	
 
 	//TEST
-	//patchCall((void*)0x0046EEA3, ParseQB_Patched); /* loads script files */
 	//uint32_t bb = 0xDEADBEEF;
 	//uint32_t bb = GenerateCRCFromString_Native("white");
 	//printf("0x%08x\n", bb);

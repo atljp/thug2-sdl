@@ -17,6 +17,9 @@ PIPLoadPre_NativeCall* PIPLoadPre_Native = (PIPLoadPre_NativeCall*)(0x005B75A0);
 typedef void(__thiscall* PreMgrLoadPre_NativeCall)(void* arg1, uint8_t* arg2, char* arg3, char* arg4, char arg5);
 PreMgrLoadPre_NativeCall PreMgrLoadPre = (PreMgrLoadPre_NativeCall)(0x005B8EE0);
 
+typedef void ParseQB_NativeCall(const char* p_fileName, uint8_t* p_qb, int ecx, int assertIfDuplicateSymbols, bool allocateChecksumNameLookupTable);
+ParseQB_NativeCall* ParseQB_Native = (ParseQB_NativeCall*)(0x00472420);
+
 //##############################
 std::unordered_set<std::string> all_pre_files() {
 	return {
@@ -302,6 +305,54 @@ void __fastcall PreMgrLoadPre_Wrapper(void* arg1, void* unused, uint8_t* p_data,
 	PreMgrLoadPre(arg1, p_data, arg3, arg4, arg5);
 }
 
+/*
+void ParseQB_Patched(const char* p_fileName, uint8_t* p_qb, int unused, int assertIfDuplicateSymbols, bool allocateChecksumNameLookupTable)
+{
+	if (!strcmp(p_fileName, "scripts\\game\\menu\\gamemenu_levelselect.qb")) {
+		//ParseQB_Native(p_fileName, (uint8_t*)"pre\\imaginemod\\gamemenu_levelselect.qb", 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
+
+		const char* filePath = "D:\\Tony Hawk's 6 - Underground 2\\Game\\Data\\pre\\mymod\\gamemenu_levelselect.qb";
+
+		// Open the file in binary mode
+		std::ifstream file(filePath, std::ios::binary | std::ios::ate);
+		std::streamsize size = file.tellg();
+		file.seekg(0, std::ios::beg);
+		uint8_t* buffer = new uint8_t[size];
+		if (!file.read(reinterpret_cast<char*>(buffer), size)) {
+			std::cerr << "Failed to read the file." << std::endl;
+			delete[] buffer;
+		}
+		file.close();
+		uint8_t* ptr = buffer;
+
+		ParseQB_Native("scripts\\game\\menu\\gamemenu_levelselect.qb", ptr, 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
+		delete[] buffer;
+	}
+	else if (!strcmp(p_fileName, "scripts\\game\\Levels.qb")) {
+		const char* filePath = "D:\\Tony Hawk's 6 - Underground 2\\Game\\Data\\pre\\mymod\\Levels.qb";
+
+		// Open the file in binary mode
+		std::ifstream file(filePath, std::ios::binary | std::ios::ate);
+		std::streamsize size = file.tellg();
+		file.seekg(0, std::ios::beg);
+		uint8_t* buffer = new uint8_t[size];
+		if (!file.read(reinterpret_cast<char*>(buffer), size)) {
+			std::cerr << "Failed to read the file." << std::endl;
+			delete[] buffer;
+		}
+		file.close();
+		uint8_t* ptr = buffer;
+
+		ParseQB_Native("scripts\\game\\Levels.qb", ptr, 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
+		delete[] buffer;
+	}
+
+	else {
+		ParseQB_Native(p_fileName, p_qb, 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
+	}
+}
+*/
+
 void getWindowTitle(struct modsettings* modsettingsOut)
 {
 	modsettingsOut->windowtitle = modname;
@@ -348,6 +399,8 @@ void initMod()
 		}
 	}
 
+	//patchCall((void*)0x0046EEA3, ParseQB_Patched); /* loads script files */
+
 	/*
 	for (auto& pair : fileNameMapping) {
 		printf("std::map contents: %s -> %s\n", pair.first.c_str(), pair.second.c_str());
@@ -382,7 +435,7 @@ UseMod=1
 Folder=data/pre/mymod
 ```
 
-As seen by the folder value, you place mod contents inside your mod folder at C:\<thug2-install-path>\Game\Data\pre\myanmod
+As seen by the folder value, you place mod contents inside your mod folder at C:\<thug2-install-path>\Game\Data\pre\mymod
 The folder needs a mod.ini so the contents can be loaded properly. It can look like this:
 ```
 [MODINFO]

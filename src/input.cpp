@@ -25,6 +25,12 @@ SDL_Locale* locale = SDL_GetPreferredLocales();
 HKL lang = ::GetKeyboardLayout(0);
 LANGID language = PRIMARYLANGID(lang);
 
+struct SkateInstance /* singleton of Skate::Instance() */
+{
+	char unk[888];
+	uint32_t level;
+};
+
 
 char* executableDirectory3[MAX_PATH];
 typedef struct {
@@ -500,19 +506,20 @@ void pollKeyboard(device* dev) {
 			buffer = 15;
 		} else if (*(uint8_t*)(0x7CCDF8)) {
 			CheckChatHotkey();
-			buffer = 20;
+			buffer = 10;
 		}
 		
 	}
 
 	// Menu = ESC
 	if (keyboardState[0x29] && buffer == 0) {
-		//if (menu_on_screen()) {
+		SkateInstance* Skate = (SkateInstance*)*(uint32_t*)(0x007CE478);
+		if (Skate->level == 0xE92ECAFE || !TextInputInNetGame()) {
 			dev->controlData[3] |= 0x01 << 5;
-		//} else {
+		} else {
 			dev->controlData[2] |= 0x01 << 3;
-		//}
-		buffer = 20;
+		}
+		buffer = 10;
 	}
 
 	// ----------------------------------------------
