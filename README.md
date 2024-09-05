@@ -76,7 +76,7 @@ The file names on the left are the original names of THUG2 scripts you're replac
 File endings are needed here.<br><br>
 When activated, the game will perform various checks when launching the game to make sure that the folder and files exist as specified. If everything was loaded correctly, the window title will also contain the loaded mod name.
 <br><br>
-A collection of mods can be found here: [THUG2-Legacy-Mods](https://github.com/atljp/THUG2-Legacy-Mods)
+A collection of mods can be found here: [THUG2LegacyMods](https://github.com/atljp/THUG2LegacyMods)
 
 ## BUILDING
 

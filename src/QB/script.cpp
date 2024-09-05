@@ -307,18 +307,23 @@ BOOL SetScreenElementProps_Wrapper(Script::LazyStruct* pParams, DummyScript* pSc
 				sCreateSymbolOfTheFormNameEqualsValue_Native((uint8_t*)skateshop_scaling_options_new, 0xD2BE4CAF, "scripts\\myan.qb"); /*data must not contain newlines but must end with one (token 0x01). returns pointer to last newline token*/
 			}
 		}
-	}
-	else if (pScript->mScriptNameChecksum == 0xB9ED9B74) /*script: create_internet_options*/
-	{
-		pParams->GetChecksum(0x40C698AF, &p_checksum, false); /*id*/
-		if (p_checksum == 0x455A37D3) /*menu_create_profile*/
+		else if (pScript->mScriptNameChecksum == 0xB9ED9B74) /*script: create_internet_options*/
 		{
-			if (ProfileLoggedIn_Native(pParams, pScript))
+			pParams->GetChecksum(0x40C698AF, &p_checksum, false); /*id*/
+			if (p_checksum == 0x455A37D3) /*menu_create_profile*/
 			{
-				//100061b9
+				if (ProfileLoggedIn_Native(pParams, pScript))
+				{
+					//100061b9
+				}
+			}
+			else if (p_checksum == 0x62d6356f) /*menu_save*/
+			{
+
 			}
 		}
 	}
+	
 
 	/*scripts/mainmenu/levels/mainmenu/scalingmenu.txt*/
 	return SetScreenElementProps_Native(pParams, pScript);
