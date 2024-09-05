@@ -26,6 +26,9 @@ This mod is still under development!
 - Improved graphics (shadows and edges are slightly sharper, most noticeably on high resolutions)
 - Fixed graphical bug during screen flashes (e.g. Frankling Grind)
 - Fixed camera shake effect not working while skater is off board (e.g. LA earthquake)
+- Mod loader for legacy mods (see -section modloader-)
+- Placeholder CFuncs that can be registered and called from your scripts (for script mod creators)
+- NoAdditionalScriptMods can be set in partymod.ini to disable all script related changes 
 
 ## TODO
 
@@ -52,7 +55,28 @@ This mod is still under development!
 - Empty sticker texture
 - Colored text input
 - Prevent chat reset in netgames when starting/ending game or changing levels
-- Fun stuff: Boostplants, BHRA, low sticker slaps, wallride anywhere, jank drops, steep skating angles, high acid drops, etc..
+
+## MOD LOADER
+
+In partymod.ini, you can activate and define legacy script mods in the `AdditionalMods` section like this:
+```
+[AdditionalMods]
+UseMod=1
+Folder=data/pre/mymod
+```
+You place mod contents inside your mod folder at `C:\<thug2-install-path>\Game\Data\pre\mymod`<br>
+The folder needs a `mod.ini` so the contents can be loaded properly. It can look like this:
+```
+[MODINFO]
+Name=MyMod
+qb_scripts.prx=modded_scripts.prx
+anims.prx=modded_anims.prx
+```
+The file names on the left are the original names of THUG2 scripts you're replacing. The modded files on the right have to be inside the mod folder alongside the mod.ini file.<br>
+File endings are needed here.<br><br>
+When activated, the game will perform various checks when launching the game to make sure that the folder and files exist as specified. If everything was loaded correctly, the window title will also contain the loaded mod name.
+<br><br>
+A collection of mods can be found here: [THUG2-Legacy-Mods](https://github.com/atljp/THUG2-Legacy-Mods)
 
 ## BUILDING
 

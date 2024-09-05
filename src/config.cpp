@@ -30,16 +30,15 @@ uint8_t buttonfont;
 uint8_t intromovies;
 uint8_t spindelay;
 uint8_t airdrift;
+uint8_t walkspin;
 uint8_t dropdowncontrol;
-uint8_t suninnetgame;
 uint8_t boardscuffs;
 uint8_t Ps2Controls;
 uint8_t quickgetup;
-uint8_t wallrideanywhere;
-uint8_t jankdrops;
 uint8_t invertRXplayer1;
 uint8_t invertRYplayer1;
 bool usemod = false;
+bool noadditionalscriptmods = false;
 
 int resX;
 int resY;
@@ -75,8 +74,9 @@ void initPatch() {
 	intromovies = getIniBool(MISC_SECTION, "IntroMovies", 1, configFile);
 	spindelay = getIniBool(GAMEPLAY_SECTION, "SpinDelay", 1, configFile);
 	airdrift = getIniBool(GAMEPLAY_SECTION, "THUGAirDrift", 0, configFile);
-	suninnetgame = getIniBool(MISC_SECTION, "SunInNetGame", 0, configFile);
+	walkspin = getIniBool(GAMEPLAY_SECTION, "WalkSpin", 1, configFile);
 	boardscuffs = getIniBool(MISC_SECTION, "Boardscuffs", 1, configFile);
+	noadditionalscriptmods = getIniBool(MISC_SECTION, "NoAdditionalScriptMods", 0, configFile);
 	graphics_settings.bettergraphics = getIniBool(GRAPHICS_SECTION, "BetterGraphics", 0, configFile);
 	graphics_settings.antialiasing = getIniBool(GRAPHICS_SECTION, "AntiAliasing", 0, configFile);
 	graphics_settings.hqshadows = getIniBool(GRAPHICS_SECTION, "HQShadows", 0, configFile);
@@ -90,8 +90,6 @@ void initPatch() {
 	Ps2Controls = getIniBool(CONTROLS_SECTION, "Ps2Controls", 1, configFile);
 	dropdowncontrol = GetPrivateProfileInt(CONTROLS_SECTION, "DropDownControl", 1, configFile);
 	quickgetup = GetPrivateProfileInt(GAMEPLAY_SECTION, "QuickGetUp", 0, configFile);
-	wallrideanywhere = GetPrivateProfileInt(EXTRA_SECTION, "WallrideAnywhere", 0, configFile);
-	jankdrops = GetPrivateProfileInt(EXTRA_SECTION, "JankDrops", 0, configFile);
 	invertRXplayer1 = getIniBool(CONTROLS_SECTION, "InvertRXPlayer1", 0, configFile);
 	invertRYplayer1 = getIniBool(CONTROLS_SECTION, "InvertRYPlayer1", 0, configFile);
 	usemod = getIniBool(MOD_SECTION, "UseMod", 0, configFile);
@@ -141,7 +139,8 @@ void initPatch() {
 		patchNop((void*)ADDR_AirDrift, 8);
 		/* Walkspin is disabled in script.cpp */
 	}
-	Log::TypedLog(CHN_DLL, "Airdrift: %s\n", airdrift ? "Enabled" : "Disabled");
+	Log::TypedLog(CHN_DLL, "AirDrift: %s\n", airdrift ? "Enabled" : "Disabled");
+	Log::TypedLog(CHN_DLL, "WalkSpin: %s\n", walkspin ? "Enabled (THUG2)" : "Disabled (THUG)");
 
 	/* Ps2Controls */
 	Log::TypedLog(CHN_DLL, "Ps2Controls: %s\n", Ps2Controls ? "Enabled" : "Disabled");
@@ -163,24 +162,10 @@ void initPatch() {
 		patchNop((void*)ADDR_SpinLagL, 2);
 		patchNop((void*)ADDR_SpinLagR, 2);
 	}
-	Log::TypedLog(CHN_DLL, "Spindelay: %s\n", spindelay ? "Enabled (PC default)" : "Disabled (Ps2 default)");
-
-	/*Extra tech: Wallride anywhere*/
-	if (wallrideanywhere)
-	{
-		patchJump((void*)0x00500441, wallrideanywhere_patch);
-		if (wallrideanywhere == 2) patchNop((void*)0x00500424, 6);
-	}
-	Log::TypedLog(CHN_DLL, "Wallride Anywhere: %s\n", (wallrideanywhere == 2) ? "Extended" : (wallrideanywhere ? "Enabled" : "Disabled"));
-
-	if (jankdrops)
-	{
-		patchNop((void*)0x00502629, 6);
-		patchDWord((void*)0x006467BC, 0x3F733333);
-	}
-	Log::TypedLog(CHN_DLL, "Jank Drops: %s\n", jankdrops ? "Enabled" : "Disabled");
-
-	Log::TypedLog(CHN_DLL, "Custom mods: %s\n", usemod ? "Enabled" : "Disabled");
+	Log::TypedLog(CHN_DLL, "SpinDelay: %s\n", spindelay ? "Enabled (PC default)" : "Disabled (Ps2 default)");
+	Log::TypedLog(CHN_DLL, "BoardScuffs: %s\n", boardscuffs ? "Enabled" : "Disabled");
+	Log::TypedLog(CHN_DLL, "NoAdditionalScriptMods: %s\n", noadditionalscriptmods ? "Enabled" : "Disabled");
+		
 
 	/* Graphic settings */
 	if (graphics_settings.bettergraphics) {
@@ -450,10 +435,11 @@ float getaspectratio() {
 void loadScriptSettings(struct scriptsettings* scriptsettingsOut) {
 	if (scriptsettingsOut) {
 		scriptsettingsOut->airdrift = airdrift;
-		scriptsettingsOut->suninnetgame = suninnetgame;
+		scriptsettingsOut->walkspin = walkspin;
 		scriptsettingsOut->boardscuffs = boardscuffs;
 		scriptsettingsOut->dropdowncontrol = dropdowncontrol;
 		scriptsettingsOut->quickgetup = quickgetup;
+		scriptsettingsOut->noadditionalscriptmods = noadditionalscriptmods;
 	}
 }
 

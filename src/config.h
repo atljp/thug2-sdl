@@ -37,7 +37,7 @@ void ExitInstance(void);
 #define CONTROLS_SECTION "Controls"
 #define MOD_SECTION "AdditionalMods"
 #define VERSION_NUMBER_MAJOR 0
-#define VERSION_NUMBER_MINOR 5
+#define VERSION_NUMBER_MINOR 6
 
 struct keybinds {
 	//SDL_Scancode menu;
@@ -142,10 +142,11 @@ struct inputsettings {
 
 struct scriptsettings {
 	uint8_t airdrift;
-	uint8_t suninnetgame;
+	uint8_t walkspin;
 	uint8_t boardscuffs;
 	uint8_t dropdowncontrol;
 	uint8_t quickgetup;
+	bool noadditionalscriptmods;
 };
 
 struct modsettings {

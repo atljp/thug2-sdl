@@ -16,7 +16,6 @@ uint8_t isKeyboardTyping();
 uint8_t menu_on_screen();
 void CheckChatHotkey();
 bool TextInputInNetGame();
-SDL_Window* mWindow;
 
 uint32_t checksum;
 void __cdecl set_actuators(int port, uint16_t hight, uint16_t low);
@@ -30,7 +29,6 @@ struct SkateInstance /* singleton of Skate::Instance() */
 	char unk[888];
 	uint32_t level;
 };
-
 
 char* executableDirectory3[MAX_PATH];
 typedef struct {
@@ -47,12 +45,11 @@ typedef struct {
 	uint8_t vibrationData_max[32];
 	uint8_t vibrationData_oldDirect[32];    // there may be something before this
 	uint32_t unk5;
-	//uint32_t unk6;
 	uint32_t actuatorsDisabled;
 	uint32_t capabilities;
-	uint32_t unk7;
+	uint32_t unk6;
 	uint32_t num_actuators;
-	uint32_t unk8;
+	uint32_t unk7;
 	uint32_t state;
 	uint32_t test;
 	uint32_t index;
@@ -349,7 +346,6 @@ void pollController(device* dev, SDL_GameController* controller) {
 				dev->controlData[20] |= 0x01 << 0;
 			}
 			if (getButton(controller, padbinds.caveman2)) {
-				//printf("Caveman2\n");
 				dev->controlData[20] |= 0x01 << 1; //Just Caveman but also "Zoom Out" in Create-A-Goal
 			}
 		}
@@ -1100,6 +1096,19 @@ void processEvent(SDL_Event* e) {
 	}
 }
 
+typedef void (__thiscall* processController_NativeCall)(device* dev);
+processController_NativeCall processControllerNative = (processController_NativeCall)(0x005BDCC0);
+
+void __fastcall mywrapper(device* dev, void* unused)
+{
+	SDL_Event e;
+	while (SDL_PollEvent(&e)) {
+		processEvent(&e);
+	}
+
+	processControllerNative(dev);
+}
+
 void __cdecl processController(device* dev) {
 	// cheating:
 	// replace type with index
@@ -1265,15 +1274,13 @@ void __stdcall initManager() {
 	initSDLControllers();
 
 	if (inputsettings.isPs2Controls) {
-		//printf("PS2 Controls enabled\n");
 		patchPs2Buttons();
 	}
-	//else
-		//printf("PS2 Controls disabled\n");
+
 	
 	// Add missing key info: Since we don't use the launcher, no registry values for our keybinds are set.
 	// The game normally loads keybinds found in the registry and stores them at these addresses (starting at 0x007D6794).
-	// This simulates the launcher storing its defined keybinds in memory so that they can be displayed in game (e.g., Edit Tricks menu "<- + KP4" or Tantrum Meter "Press KP8 to freak out").
+	// This patch simulates the launcher storing its defined keybinds in memory so that they can be displayed in game (e.g., Edit Tricks menu "<- + KP4" or Tantrum Meter "Press KP8 to freak out").
 	patchDWord((void*)0x007D6790, convert_SDL_to_OIS_keycode(keybinds.ollie));
 	patchDWord((void*)0x007D6794, convert_SDL_to_OIS_keycode(keybinds.grab));
 	patchDWord((void*)0x007D6798, convert_SDL_to_OIS_keycode(keybinds.kick));
@@ -1283,8 +1290,6 @@ void __stdcall initManager() {
 	patchDWord((void*)0x007D67A8, convert_SDL_to_OIS_keycode(keybinds.caveman));
 	patchDWord((void*)0x007D67AC, convert_SDL_to_OIS_keycode(keybinds.caveman2));
 	patchDWord((void*)0x007D67B8, convert_SDL_to_OIS_keycode(keybinds.focus));
-
-	mWindow = getWindowHandle();
 }
 
 void patchPs2Buttons() {
@@ -1323,9 +1328,14 @@ void patchPs2Buttons() {
 void patchInput() {
 	// patch SIO::Device
 	// process
-	patchThisToCdecl((void*)0x005BDCC0, &processController); //005BDB60 //005BDBD0 //0x005BDCC0 <- looks like thaw
+	patchThisToCdecl((void*)0x005BDCC0, &processController);
 	patchBytesM((void*)(0x005BDCC0 + 7), (BYTE*)"\xC2\x04\x00", 3); //ret 4
-	//patchByte((void*)(0x005BDBD0 + 7), 0xC3);
+
+	// TEST
+
+	//patchCall((void*)0x005BE1A7, mywrapper);
+
+
 
 	// set_actuator
 	// don't call read_data in activate_actuators
@@ -1342,7 +1352,6 @@ void patchInput() {
 
 	// some config call relating to the dinput devices
 	patchNop((void*)0x004E2C16, 5);
-
 }
 
 

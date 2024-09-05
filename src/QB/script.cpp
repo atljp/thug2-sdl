@@ -331,24 +331,11 @@ BOOL SetScreenElementProps_Wrapper(Script::LazyStruct* pParams, DummyScript* pSc
 void initScriptPatch()
 {
 	setDropDownKeys(); /*sets up GrindRelease array to define different rail dropdown keys*/
-	loadScripts(); /*loads single functions of scripts and overwrites existing ones*/
-}
+	if (!mScriptsettings.noadditionalscriptmods) loadScripts(); /*loads single functions of scripts and overwrites existing ones*/
 
-void LookUpSymbol_Patched(uint32_t checksum)
-{
-	/*unused for now*/
-	if (mScriptsettings.airdrift && checksum == 0x1CA80417 && !walkspinpatched) {
-		patchDWord((void*)(uint32_t)CSymbolTableEntryResolve_Native(checksum), 0);
-		walkspinpatched = true;
-	}
-	else if (!mScriptsettings.boardscuffs && checksum == 0x9CE4DA4F && !boardscuffpatched) {
-		patchDWord((void*)(uint32_t)CSymbolTableEntryResolve_Native(checksum), 0);
-		boardscuffpatched = true;
-	}
-	if (walkspinpatched && boardscuffpatched)
-		patchBytesM((void*)0x00474F25, (BYTE*)"\xE8\xC6\x3D\x00\x00", 5); /*unhook*/
-
-	CSymbolTableEntryResolve_Native(checksum);
+	// To disable walk spin independently from the NoAdditionalScriptsMod flag it is patched here
+	if (!mScriptsettings.walkspin)
+		removeScript(GenerateCRCFromString_Native("flip_skater_if_180_off"));
 }
 
 uint32_t __fastcall removeScript(uint32_t partChecksum)
@@ -397,12 +384,6 @@ void loadScripts()
 	uint32_t contentsChecksum3 = CalculateScriptContentsChecksum_Native((uint8_t*)showboardmyan);
 	sCreateScriptSymbolWrapper(0x9C, (uint8_t*)showboardmyan, 0x36150445, contentsChecksum3, "scripts\\myan.qb"); /* new script: showboardmyan 0x36150445 */
 
-	if (mScriptsettings.suninnetgame)
-		removeScript(0x8054f197); /* disablesun */
-
-	if (mScriptsettings.airdrift)
-		removeScript(GenerateCRCFromString_Native("flip_skater_if_180_off"));
-
 	if (!mScriptsettings.boardscuffs)
 		removeScript(GenerateCRCFromString_Native("DoBoardScuff"));
 
@@ -411,6 +392,10 @@ void loadScripts()
 		removeScript(0x8F488DCA); /*bail_quick_getup2*/
 		uint32_t contentsChecksum4 = CalculateScriptContentsChecksum_Native((uint8_t*)bail_quick_getup2_new);
 		sCreateScriptSymbolWrapper(0x5A, (uint8_t*)bail_quick_getup2_new, 0x8F488DCA, contentsChecksum4, "scripts\\game\\skater\\bails.qb");
+
+		removeScript(0x67823B68); /*baildone*/
+		uint32_t contentsChecksum5 = CalculateScriptContentsChecksum_Native((uint8_t*)baildone_new);
+		sCreateScriptSymbolWrapper(0xC6, (uint8_t*)baildone_new, 0x67823B68, contentsChecksum5, "scripts\\game\\skater\\bails.qb");
 
 		removeScript(GenerateCRCFromString_Native("NoQuickGetup"));
 	}
@@ -517,11 +502,12 @@ void patchScripts()
 
 	/*patch CFuncs*/
 	CFuncs::RedirectFunction("IsPS2_Patched", IsPS2_Patched); /*returns true for the neversoft test skater*/
-	CFuncs::RedirectFunction("IsXBOX", IsXBOX_Patched); /*load OpenSpy logo*/
 	CFuncs::RedirectFunction("GetMemCardSpaceAvailable", GetMemCardSpaceAvailable_Patched); /*fix large drive bug*/
 	CFuncs::RedirectFunction("CreateScreenElement", CreateScreenElement_Wrapper); /*adjusts scale and position of main menu screen elements in widescreen*/
-	CFuncs::RedirectFunction("SetScreenElementProps", SetScreenElementProps_Wrapper); /*add unlimited three-axes scaling and board scaling to C-A-S*/
-
+	if (!mScriptsettings.noadditionalscriptmods) {
+		CFuncs::RedirectFunction("IsXBOX", IsXBOX_Patched); /*load OpenSpy logo*/
+		CFuncs::RedirectFunction("SetScreenElementProps", SetScreenElementProps_Wrapper); /*add unlimited three-axes scaling and board scaling to C-A-S*/
+	}
 	Log::TypedLog(CHN_DLL, "Initializing CFuncs\n");
 
 	
@@ -533,3 +519,19 @@ void patchScripts()
 	//patchCall((void*)0x00474F25, LookUpSymbol_Patched); /* accesses the global hash map */
 }
 
+void LookUpSymbol_Patched(uint32_t checksum)
+{
+	/*unused for now*/
+	if (mScriptsettings.airdrift && checksum == 0x1CA80417 && !walkspinpatched) {
+		patchDWord((void*)(uint32_t)CSymbolTableEntryResolve_Native(checksum), 0);
+		walkspinpatched = true;
+	}
+	else if (!mScriptsettings.boardscuffs && checksum == 0x9CE4DA4F && !boardscuffpatched) {
+		patchDWord((void*)(uint32_t)CSymbolTableEntryResolve_Native(checksum), 0);
+		boardscuffpatched = true;
+	}
+	if (walkspinpatched && boardscuffpatched)
+		patchBytesM((void*)0x00474F25, (BYTE*)"\xE8\xC6\x3D\x00\x00", 5); /*unhook*/
+
+	CSymbolTableEntryResolve_Native(checksum);
+}

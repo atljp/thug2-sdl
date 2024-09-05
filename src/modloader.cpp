@@ -4,7 +4,7 @@
 
 struct modsettings mModsettings;
 struct stat info;
-char modname[30];
+char modname[MAX_PATH];
 char modfolder[MAX_PATH];
 char full_modfolder[MAX_PATH];
 char ini_file[MAX_PATH];
@@ -153,7 +153,7 @@ void generateModdedFileVector(std::vector<std::string>& mmoddedFileNames_origina
 	if (!iniFile.is_open()) {
 		Log::TypedLog(CHN_MOD, "Error: Could not open the .ini file!\n"); return;
 	}
-	else { Log::TypedLog(CHN_MOD, "FOUND MOD.INI\n"); }
+	else { Log::TypedLog(CHN_MOD, "Successfully loaded mod.ini\n"); }
 
 	std::string line;
 	while (std::getline(iniFile, line)) {
@@ -305,54 +305,6 @@ void __fastcall PreMgrLoadPre_Wrapper(void* arg1, void* unused, uint8_t* p_data,
 	PreMgrLoadPre(arg1, p_data, arg3, arg4, arg5);
 }
 
-/*
-void ParseQB_Patched(const char* p_fileName, uint8_t* p_qb, int unused, int assertIfDuplicateSymbols, bool allocateChecksumNameLookupTable)
-{
-	if (!strcmp(p_fileName, "scripts\\game\\menu\\gamemenu_levelselect.qb")) {
-		//ParseQB_Native(p_fileName, (uint8_t*)"pre\\imaginemod\\gamemenu_levelselect.qb", 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
-
-		const char* filePath = "D:\\Tony Hawk's 6 - Underground 2\\Game\\Data\\pre\\mymod\\gamemenu_levelselect.qb";
-
-		// Open the file in binary mode
-		std::ifstream file(filePath, std::ios::binary | std::ios::ate);
-		std::streamsize size = file.tellg();
-		file.seekg(0, std::ios::beg);
-		uint8_t* buffer = new uint8_t[size];
-		if (!file.read(reinterpret_cast<char*>(buffer), size)) {
-			std::cerr << "Failed to read the file." << std::endl;
-			delete[] buffer;
-		}
-		file.close();
-		uint8_t* ptr = buffer;
-
-		ParseQB_Native("scripts\\game\\menu\\gamemenu_levelselect.qb", ptr, 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
-		delete[] buffer;
-	}
-	else if (!strcmp(p_fileName, "scripts\\game\\Levels.qb")) {
-		const char* filePath = "D:\\Tony Hawk's 6 - Underground 2\\Game\\Data\\pre\\mymod\\Levels.qb";
-
-		// Open the file in binary mode
-		std::ifstream file(filePath, std::ios::binary | std::ios::ate);
-		std::streamsize size = file.tellg();
-		file.seekg(0, std::ios::beg);
-		uint8_t* buffer = new uint8_t[size];
-		if (!file.read(reinterpret_cast<char*>(buffer), size)) {
-			std::cerr << "Failed to read the file." << std::endl;
-			delete[] buffer;
-		}
-		file.close();
-		uint8_t* ptr = buffer;
-
-		ParseQB_Native("scripts\\game\\Levels.qb", ptr, 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
-		delete[] buffer;
-	}
-
-	else {
-		ParseQB_Native(p_fileName, p_qb, 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
-	}
-}
-*/
-
 void getWindowTitle(struct modsettings* modsettingsOut)
 {
 	modsettingsOut->windowtitle = modname;
@@ -360,7 +312,7 @@ void getWindowTitle(struct modsettings* modsettingsOut)
 
 void initMod()
 {
-	// Get info to determine if the mod loader is active. Also get handles to partymod.ini, the game's directory and the window title
+	// Get info to determine if the mod loader is active. Also get handles to partymod.ini, the game directory and the window title
 	// The info is stored in the mModsettings struct
 	loadModSettings(&mModsettings);
 
@@ -399,8 +351,6 @@ void initMod()
 		}
 	}
 
-	//patchCall((void*)0x0046EEA3, ParseQB_Patched); /* loads script files */
-
 	/*
 	for (auto& pair : fileNameMapping) {
 		printf("std::map contents: %s -> %s\n", pair.first.c_str(), pair.second.c_str());
@@ -413,43 +363,43 @@ void initMod()
 	for (const auto& entry : mmoddedFileNames_modded) {
 		std::cout << "HERE: " << entry << std::endl;
 	}
-
 	for (const auto& entry : mmoddedFileNames_original) {
 		std::cout << "ORIGINAL: " << entry << std::endl;
 	}
-
 	for (const auto& entry : mmoddedFileNames_modded) {
 		std::cout << "MODDED: " << entry << std::endl;
 	}
 	*/
-	
-
 }
 
 /*
+* TODO: Add the option to load loose qb files
+* patchCall((void*)0x0046EEA3, ParseQB_Patched); // loads script files
+void ParseQB_Patched(const char* p_fileName, uint8_t* p_qb, int unused, int assertIfDuplicateSymbols, bool allocateChecksumNameLookupTable)
+{
+	if (!strcmp(p_fileName, "scripts\\game\\skater\\physics.qb")) {
+		//ParseQB_Native(p_fileName, (uint8_t*)"pre\\imaginemod\\gamemenu_levelselect.qb", 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
 
-In partymod.ini, you can activate and define mods like this:
-```
-[AdditionalMods]
-UseMod=1
-Folder=data/pre/mymod
-```
+		const char* filePath = "D:\\Tony Hawk's 6 - Underground 2\\Game\\Data\\pre\\imaginemod\\physics.qb";
 
-As seen by the folder value, you place mod contents inside your mod folder at C:\<thug2-install-path>\Game\Data\pre\mymod
-The folder needs a mod.ini so the contents can be loaded properly. It can look like this:
-```
-[MODINFO]
-Name=Mymod
-qb_scripts.prx=modded_scripts.prx
-anims.prx=modded_anims.prx
-```
-
-Note that the file names on the left are the original names of THUG2 scripts you're replacing. The modded files have to be inside the mod folder alongside the mod.ini file.
-Also, file endings are needed here.
-
-When activated, the game will perform various checks when launching the game so make sure the folder and files exists as specified. If everything was loaded correclty, the window title will contain the loaded mod name.
-
+		// Open the file in binary mode
+		std::ifstream file(filePath, std::ios::binary | std::ios::ate);
+		std::streamsize size = file.tellg();
+		file.seekg(0, std::ios::beg);
+		uint8_t* buffer = new uint8_t[size];
+		if (!file.read(reinterpret_cast<char*>(buffer), size)) {
+			std::cerr << "Failed to read the file." << std::endl;
+			delete[] buffer;
+		}
+		file.close();
+		uint8_t* ptr = buffer;
+		printf("replacing physics.qb");
+		ParseQB_Native("scripts\\game\\skater\\physics.qb", ptr, 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
+		delete[] buffer;
+	}
+	else {
+		ParseQB_Native(p_fileName, p_qb, 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
+	}
+}
 */
-
-
 
