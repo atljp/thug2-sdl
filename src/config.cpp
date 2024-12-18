@@ -169,9 +169,9 @@ void initPatch() {
 
 	/* Graphic settings */
 	if (graphics_settings.bettergraphics) {
-		/* Slight graphical improvements. this may break flash effects */
+		/* Slight graphical improvements */
 		patchNop((void*)0x0044F045, 8);
-		patchNop((void*)0x0048C330, 5);
+		patchNop((void*)0x0048C330, 5); // This breaks flash effects 
 		patchNop((void*)0x004B2DC4, 5);
 		patchNop((void*)0x004B3405, 5);
 		/* very high shadow quality */

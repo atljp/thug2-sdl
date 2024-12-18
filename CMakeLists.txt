@@ -7,6 +7,7 @@ set(SRC "${CMAKE_SOURCE_DIR}/src")
 set(SOURCE_FILES
 	"${SRC}/main.cpp"
 	"${SRC}/exports.def"
+	"${SRC}/Resources/resources.rc"
 	"${SRC}/patch.cpp"
 	"${SRC}/config.cpp"
 	"${SRC}/displayconfig.cpp"
@@ -39,6 +40,7 @@ set(HEADER_FILES
 	"${SRC}/QB/QB.h"
 	"${SRC}/QB/script.h"
 	"${SRC}/QB/scriptcontent.h"
+	"${SRC}/Resources/resources.h"	
 )
 
 find_package(SDL2 REQUIRED)

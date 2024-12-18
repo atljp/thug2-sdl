@@ -15,6 +15,7 @@
 #include "QB/Qb.h"
 #include "QB/script.h"
 #include "QB/CFuncs.h"
+#include <Resources/resources.h>
 
 #include <sys/stat.h>
 #include <string>

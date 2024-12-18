@@ -92,3 +92,37 @@ void ExitInstance() {
 	    gl_hOriginalDll = NULL;  
 	}
 }
+
+bool GetResourcePointer(HINSTANCE Instance, int ResID, LPVOID* ppRes, DWORD* pdwResSize) {
+	// Check the pointers to which we want to write
+	if (ppRes && pdwResSize)
+	{
+		HRSRC hRsrc;
+		// Find the resource ResName of type ResType in the DLL described by Instance
+		if (hRsrc = FindResource((HMODULE)Instance, MAKEINTRESOURCE(ResID), RT_RCDATA))
+		{
+			HGLOBAL hGlob;
+			// Make sure it's in memory ...
+			if (hGlob = LoadResource(Instance, hRsrc))
+			{
+				// Now lock it to get a pointer
+				*ppRes = LockResource(hGlob);
+				// Also retrieve the size of the resource
+				*pdwResSize = SizeofResource(Instance, hRsrc);
+				// Return TRUE only if both succeeded
+				return (*ppRes && *pdwResSize);
+			}
+		}
+	}
+	// Failure means don't use the values in *ppRes and *pdwResSize
+	return false;
+}
+
+LPVOID getResource(int resID) {
+	LPVOID pResource;
+	DWORD pResourceSize;
+	if (GetResourcePointer(gl_hThisInstance, resID, &pResource, &pResourceSize))
+		return pResource;
+	else
+		return nullptr;
+}

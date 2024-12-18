@@ -190,7 +190,7 @@ namespace Script {
 	// Get integer item
 	//---------------------------------------
 
-	int LazyStruct::GetInteger(uint32_t qbKey) // 0x004790C0
+	int LazyStruct::GetInteger(uint32_t qbKey) // 0x004790C0 or 0x00476630
 	{
 		LazyStructItem* item = GetItem(qbKey);
 		if (!item)

@@ -4,11 +4,13 @@
 #include "LazyArray.h"
 #include "malloc.h"
 
+
 struct scriptsettings mScriptsettings;
 struct inputsettings mInputsettings;
 uint32_t sCreateScriptSymbol = 0x0046FE40; /* called in sCreateScriptSymbol wrapper */
 bool walkspinpatched = false;
 bool boardscuffpatched = false;
+LPVOID pResource_oslogo;
 
 struct DummyScript
 {
@@ -93,9 +95,9 @@ bool IsXBOX_Patched(void* pParams, DummyScript* pScript)
 		if (sprite_struct)
 		{
 			sprite_struct->AddChecksum(0, 0x0B1BA9DE); /*permanenttextureheap*/
-			RunScript(0xEB117FD0 /*MemPushContext*/, sprite_struct, nullptr, nullptr);
-			LoadTextureFromBuffer_Native(*(int*)0x00700F1C, (uint8_t*)oslogo, 0x4000, 0x2074BEAE /*gslogo*/, true, true, true, true);
-			RunScript(0x3417C307 /*MemPopContext*/, nullptr, nullptr, nullptr);
+			RunScript(0xEB117FD0 /*MemPushContext*/, sprite_struct, nullptr);
+			LoadTextureFromBuffer_Native(*(int*)0x00700F1C, (uint8_t*)pResource_oslogo, 0x4000, 0x2074BEAE /*gslogo*/, true, true, true, true);
+			RunScript(0x3417C307 /*MemPopContext*/, nullptr, nullptr);
 			sprite_struct->Clear();
 			FreeQBStruct(sprite_struct);
 			return false;
@@ -245,7 +247,7 @@ BOOL SetScreenElementProps_Wrapper(Script::LazyStruct* pParams, DummyScript* pSc
 
 					done = TRUE;
 					BOOL native_val = SetScreenElementProps_Native(pParams, pScript);
-					RunScript(0x36150445, pScript->GetParams, nullptr, nullptr); /*showboardmyan*/
+					RunScript(0x36150445, pScript->GetParams, nullptr); /*showboardmyan*/
 					cas_menu->Clear();
 
 					Script::LazyStruct* event_handlers = Script::LazyStruct::s_create();
@@ -304,27 +306,15 @@ BOOL SetScreenElementProps_Wrapper(Script::LazyStruct* pParams, DummyScript* pSc
 			if (p_checksum == 0x5E430716) /*scaling_vmenu*/
 			{
 				removeScript(0xD2BE4CAF); /*skateshop_scaling_options*/
-				sCreateSymbolOfTheFormNameEqualsValue_Native((uint8_t*)skateshop_scaling_options_new, 0xD2BE4CAF, "scripts\\myan.qb"); /*data must not contain newlines but must end with one (token 0x01). returns pointer to last newline token*/
-			}
-		}
-		else if (pScript->mScriptNameChecksum == 0xB9ED9B74) /*script: create_internet_options*/
-		{
-			pParams->GetChecksum(0x40C698AF, &p_checksum, false); /*id*/
-			if (p_checksum == 0x455A37D3) /*menu_create_profile*/
-			{
-				if (ProfileLoggedIn_Native(pParams, pScript))
-				{
-					//100061b9
-				}
-			}
-			else if (p_checksum == 0x62d6356f) /*menu_save*/
-			{
-
+				sCreateSymbolOfTheFormNameEqualsValue_Native((uint8_t*)skateshop_scaling_options_new, 0xD2BE4CAF, "scripts\\myan.qb"); /*data without newlines, ends with newline (token 0x01). returns pointer to last newline token*/
 			}
 		}
 	}
-	
 
+	if (pScript->mScriptNameChecksum == 0xB9ED9B74) /*script: create_internet_options*/
+	{
+		
+	}
 	/*scripts/mainmenu/levels/mainmenu/scalingmenu.txt*/
 	return SetScreenElementProps_Native(pParams, pScript);
 }
@@ -404,7 +394,6 @@ void loadScripts()
 
 		removeScript(GenerateCRCFromString_Native("NoQuickGetup"));
 	}
-
 	/*calling sCreateSymbolOfTheFormNameEqualsValue_Native here requires manual stack cleanup: __asm {add esp, 0x8}*/
 }
 
@@ -510,7 +499,7 @@ void patchScripts()
 	CFuncs::RedirectFunction("GetMemCardSpaceAvailable", GetMemCardSpaceAvailable_Patched); /*fix large drive bug*/
 	CFuncs::RedirectFunction("CreateScreenElement", CreateScreenElement_Wrapper); /*adjusts scale and position of main menu screen elements in widescreen*/
 	if (!mScriptsettings.noadditionalscriptmods) {
-		CFuncs::RedirectFunction("IsXBOX", IsXBOX_Patched); /*load OpenSpy logo*/
+		if (pResource_oslogo = getResource(IDR_OSLOGO))  CFuncs::RedirectFunction("IsXBOX", IsXBOX_Patched); /*load OpenSpy logo*/
 		CFuncs::RedirectFunction("SetScreenElementProps", SetScreenElementProps_Wrapper); /*add unlimited three-axes scaling and board scaling to C-A-S*/
 	}
 	Log::TypedLog(CHN_DLL, "Initializing CFuncs\n");

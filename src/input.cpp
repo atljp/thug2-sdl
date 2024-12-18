@@ -12,17 +12,34 @@
 
 void patchPs2Buttons();
 void patchInput();
-uint8_t isKeyboardTyping();
 uint8_t menu_on_screen();
-void CheckChatHotkey();
-bool TextInputInNetGame();
 
 uint32_t checksum;
 void __cdecl set_actuators(int port, uint16_t hight, uint16_t low);
 
-SDL_Locale* locale = SDL_GetPreferredLocales();
-HKL lang = ::GetKeyboardLayout(0);
-LANGID language = PRIMARYLANGID(lang);
+uint8_t* isMenu = (uint8_t*)0x007CE46F;
+uint8_t* keyboard_on_screen = (uint8_t*)0x007CE46E;
+uint8_t* isCAG = (uint8_t*)0x0069BAA8;//0x006A0350;
+
+enum EEditorState
+{
+	vINACTIVE = 0xd443a2bc,		// "off"
+	vEDITING = 0x7eca21e5,		// "edit"
+	vTEST_PLAY = 0xa40f0b8a,	// "test_play"
+	vREGULAR_PLAY = 0xcd3682c1,	// "regular_play"
+
+	// use this as parameter only
+	vKEEP_SAME_STATE = 0,
+};
+
+
+struct EdCParkEditorInstance
+{
+	char unk[64];
+	EEditorState m_state;
+	char unk2[4];
+	int m_paused; //02 when paused
+};
 
 struct SkateInstance /* singleton of Skate::Instance() */
 {
@@ -31,6 +48,7 @@ struct SkateInstance /* singleton of Skate::Instance() */
 };
 
 char* executableDirectory3[MAX_PATH];
+
 typedef struct {
 	uint32_t vtablePtr;
 	uint32_t node;
@@ -73,6 +91,8 @@ uint8_t isUsingKeyboard = 1;
 typedef bool __cdecl ScriptObjectExists_NativeCall(Script::LazyStruct* params);
 ScriptObjectExists_NativeCall* ScriptObjectExists_Native = (ScriptObjectExists_NativeCall*)(0x00462340); //Thug2 offset
 
+EdCParkEditorInstance* ParkEd;
+SkateInstance* Skate;
 
 struct playerslot {
 	SDL_GameController* controller;
@@ -81,7 +101,6 @@ struct playerslot {
 	//SDL_GameControllerButton lockedButton;	// button that player used to sign-in, to be ignored until release
 };
 
-#define MAX_PLAYERS 2
 uint8_t numplayers = 0;
 struct playerslot players[MAX_PLAYERS] = { { NULL, 0 }, { NULL, 0 } };
 
@@ -90,6 +109,18 @@ void setUsingKeyboard(uint8_t usingKeyboard) {
 }
 
 void patchPs2Buttons();
+
+void initializeInstance() {
+	ParkEd = (EdCParkEditorInstance*)*(uint32_t*)(0x007CE5D8);
+	Skate = (SkateInstance*)*(uint32_t*)(0x007CE478);
+
+	// Gross? Remove call inside callee
+	patchNop((void*)0x005BDA31, 5);
+}
+
+bool shouldUseMenuControls() {
+	return (*isMenu && !(ParkEd->m_state == EEditorState::vEDITING) || *isCAG || ((ParkEd->m_state == EEditorState::vEDITING) && ParkEd->m_paused));
+}
 
 void addController(int idx) {
 
@@ -257,122 +288,181 @@ void getStick(SDL_GameController* controller, controllerStick stick, uint8_t* xO
 
 void pollController(device* dev, SDL_GameController* controller) {
 
-	//TODO: Add "if in menu: default menu binds". The button hints at the bottom of the menus don't change and are set to a default.
-	//If a player is in a menu, make it default to these binds. It's basically PC controls + Spinkeys on L2 and R2, Caveman1/2 on L1 and R2
-	//Same for keyboard with e+r in CAS, Enter and Backspace in Menus, correct ESC behavior, Keyboard Typing
-
 	if (SDL_GameControllerGetAttached(controller)) {
 		dev->isValid = 1;
 		dev->isPluggedIn = 1;
 
-		// buttons
-		if (getButton(controller, padbinds.menu)) {
-			dev->controlData[2] |= 0x01 << 3;
-		}
-		if (getButton(controller, padbinds.cameraToggle)) {
-			dev->controlData[2] |= 0x01 << 0;
-		}
-		if (getButton(controller, padbinds.cameraSwivelLock)) {
-			dev->controlData[2] |= 0x01 << 2;
-		}
-		if (getButton(controller, padbinds.focus)) {
-			dev->controlData[2] |= 0x01 << 1;
-		}
+		if (!*keyboard_on_screen && ParkEd) {
 
-		if (getButton(controller, padbinds.grind)) {
-			dev->controlData[3] |= 0x01 << 4;
-			dev->controlData[12] = 0xff;
-		}
-		if (getButton(controller, padbinds.grab)) {
-			dev->controlData[3] |= 0x01 << 5;
-			dev->controlData[13] = 0xff;
-		}
-		if (getButton(controller, padbinds.ollie)) {
-			dev->controlData[3] |= 0x01 << 6;
-			dev->controlData[14] = 0xff;
-		}
-		if (getButton(controller, padbinds.kick)) {
-			dev->controlData[3] |= 0x01 << 7;
-			dev->controlData[15] = 0xff;
-		}
+			if (shouldUseMenuControls()) {
 
-		// shoulders
-		if (inputsettings.isPs2Controls) //PS2 CONTROLS
-		{
+				/********************************************************************/
+				/*																	*/
+				/*  Menu controls													*/
+				/********************************************************************/
 
-			if (getButton(controller, padbinds.leftSpin)) {
-				dev->controlData[3] |= 0x01 << 2;
-				dev->controlData[16] = 0xff;
+				if (getButton(controller, padbinds.menu)) {
+					dev->controlData[2] |= 0x01 << 3;
+				}
+				if (getButton(controller, padbinds.grind)) {
+					dev->controlData[3] |= 0x01 << 4;
+				}
+				if (getButton(controller, padbinds.grab)) {
+					dev->controlData[3] |= 0x01 << 5;
+				}
+				if (getButton(controller, padbinds.ollie)) {
+					dev->controlData[3] |= 0x01 << 6;
+				}
+				if (getButton(controller, padbinds.kick)) {
+					dev->controlData[3] |= 0x01 << 7;
+				}
+				if (getButton(controller, padbinds.leftSpin)) {
+					dev->controlData[3] |= 0x01 << 3;
+				}
+				if (getButton(controller, padbinds.rightSpin)) {
+					dev->controlData[20] |= 0x01 << 0;
+				}
+				if (getButton(controller, padbinds.nollie)) {
+					dev->controlData[3] |= 0x01 << 2;
+				}
+				if (getButton(controller, padbinds.switchRevert)) {
+					dev->controlData[20] |= 0x01 << 1;
+				}
+				if (SDL_GameControllerGetButton(controller, (SDL_GameControllerButton)padbinds.up)) {
+					dev->controlData[2] |= 0x01 << 4;
+				}
+				if (SDL_GameControllerGetButton(controller, (SDL_GameControllerButton)padbinds.right)) {
+					dev->controlData[2] |= 0x01 << 5;
+				}
+				if (SDL_GameControllerGetButton(controller, (SDL_GameControllerButton)padbinds.down)) {
+					dev->controlData[2] |= 0x01 << 6;
+				}
+				if (SDL_GameControllerGetButton(controller, (SDL_GameControllerButton)padbinds.left)) {
+					dev->controlData[2] |= 0x01 << 7;
+				}
+				getStick(controller, padbinds.camera, &(dev->controlData[4]), &(dev->controlData[5]));
+				getStick(controller, padbinds.movement, &(dev->controlData[6]), &(dev->controlData[7]));
 			}
+			else {
 
-			if (getButton(controller, padbinds.rightSpin)) {
-				dev->controlData[3] |= 0x01 << 3;
-				dev->controlData[17] = 0xff;
+				/******************************************************************/
+				/*                                                                */
+				/*  Gameplay (in level & CAP editing) controls					  */
+				/******************************************************************/
+
+				// Buttons
+				if (getButton(controller, padbinds.menu)) {
+					dev->controlData[2] |= 0x01 << 3;
+				}
+				if (getButton(controller, padbinds.cameraToggle)) {
+					dev->controlData[2] |= 0x01 << 0;
+				}
+				if (getButton(controller, padbinds.cameraSwivelLock)) {
+					dev->controlData[2] |= 0x01 << 2;
+				}
+				if (getButton(controller, padbinds.grind)) {
+					dev->controlData[3] |= 0x01 << 4;
+					dev->controlData[12] = 0xff;
+				}
+				if (getButton(controller, padbinds.grab)) {
+					dev->controlData[3] |= 0x01 << 5;
+					dev->controlData[13] = 0xff;
+				}
+				if (getButton(controller, padbinds.ollie)) {
+					dev->controlData[3] |= 0x01 << 6;
+					dev->controlData[14] = 0xff;
+				}
+				if (getButton(controller, padbinds.kick)) {
+					dev->controlData[3] |= 0x01 << 7;
+					dev->controlData[15] = 0xff;
+				}
+				if (ParkEd->m_state == EEditorState::vEDITING) {
+					if (getButton(controller, padbinds.leftSpin)) {
+						dev->controlData[3] |= 0x01 << 2;
+					}
+					if (getButton(controller, padbinds.rightSpin)) {
+						dev->controlData[20] |= 0x01 << 0;
+					}
+					if (getButton(controller, padbinds.nollie)) {
+						dev->controlData[3] |= 0x01 << 0;
+					}
+					if (getButton(controller, padbinds.switchRevert)) {
+						dev->controlData[20] |= 0x01 << 1;
+					}
+				}
+				else {
+					// Shoulders
+					if (inputsettings.isPs2Controls) {
+						if (getButton(controller, padbinds.leftSpin)) {
+							dev->controlData[3] |= 0x01 << 2;
+							dev->controlData[16] = 0xff;
+						}
+						if (getButton(controller, padbinds.rightSpin)) {
+							dev->controlData[3] |= 0x01 << 3;
+							dev->controlData[17] = 0xff;
+						}
+						if (getButton(controller, padbinds.nollie)) {
+							dev->controlData[3] |= 0x01 << 0;
+							dev->controlData[18] = 0xff;
+						}
+						if (getButton(controller, padbinds.switchRevert)) {
+							dev->controlData[3] |= 0x01 << 1;
+							dev->controlData[19] = 0xff;
+						}
+						//Two button caveman on spinkeys
+						if ((getButton(controller, padbinds.leftSpin)) && getButton(controller, padbinds.rightSpin)) {
+							dev->controlData[20] |= 0x01 << 0;
+						}
+					}
+					else // PC controls
+					{
+						if (getButton(controller, padbinds.leftSpin)) {
+							dev->controlData[3] |= 0x01 << 2;
+							dev->controlData[16] = 0xff;
+							dev->controlData[3] |= 0x01 << 0;
+							dev->controlData[18] = 0xff;
+						}
+						if (getButton(controller, padbinds.rightSpin)) {
+							dev->controlData[3] |= 0x01 << 3;
+							dev->controlData[17] = 0xff;
+							dev->controlData[3] |= 0x01 << 1;
+							dev->controlData[19] = 0xff;
+						}
+						if (getButton(controller, padbinds.caveman)) {
+							dev->controlData[20] |= 0x01 << 0;
+						}
+						if (getButton(controller, padbinds.caveman2)) {
+							dev->controlData[20] |= 0x01 << 1;
+						}
+					}
+				}
+				// D-Pad
+				if (SDL_GameControllerGetButton(controller, (SDL_GameControllerButton)padbinds.up)) {
+					dev->controlData[2] |= 0x01 << 4;
+					dev->controlData[10] = 0xFF;
+				}
+				if (SDL_GameControllerGetButton(controller, (SDL_GameControllerButton)padbinds.right)) {
+					dev->controlData[2] |= 0x01 << 5;
+					dev->controlData[8] = 0xFF;
+				}
+				if (SDL_GameControllerGetButton(controller, (SDL_GameControllerButton)padbinds.down)) {
+					dev->controlData[2] |= 0x01 << 6;
+					dev->controlData[11] = 0xFF;
+				}
+				if (SDL_GameControllerGetButton(controller, (SDL_GameControllerButton)padbinds.left)) {
+					dev->controlData[2] |= 0x01 << 7;
+					dev->controlData[9] = 0xFF;
+				}
+				// Sticks
+				getStick(controller, padbinds.camera, &(dev->controlData[4]), &(dev->controlData[5]));
+				getStick(controller, padbinds.movement, &(dev->controlData[6]), &(dev->controlData[7]));
 			}
-
-			if (getButton(controller, padbinds.nollie)) {
-				dev->controlData[3] |= 0x01 << 0;
-				dev->controlData[18] = 0xff;
-			}
-
-			if (getButton(controller, padbinds.switchRevert)) {
-				dev->controlData[3] |= 0x01 << 1;
-				dev->controlData[19] = 0xff;
-			}
-
-			//Two button caveman on spinkeys
-			if ((getButton(controller, padbinds.leftSpin)) && getButton(controller, padbinds.rightSpin)) {
-				dev->controlData[20] |= 0x01 << 0;
-			}
-
 		}
-		else //NO PS2 CONTROLS
-		{
-			if (getButton(controller, padbinds.leftSpin)) {
-				dev->controlData[3] |= 0x01 << 2;
-				dev->controlData[16] = 0xff;
-				dev->controlData[3] |= 0x01 << 0;
-				dev->controlData[18] = 0xff;
-			}
-
-			if (getButton(controller, padbinds.rightSpin)) {
-				dev->controlData[3] |= 0x01 << 3;
-				dev->controlData[17] = 0xff;
-				dev->controlData[3] |= 0x01 << 1;
-				dev->controlData[19] = 0xff;
-			}
-
-			if (getButton(controller, padbinds.caveman)) {
-				dev->controlData[20] |= 0x01 << 0;
-			}
-			if (getButton(controller, padbinds.caveman2)) {
-				dev->controlData[20] |= 0x01 << 1; //Just Caveman but also "Zoom Out" in Create-A-Goal
+		else if (!ParkEd) { // Only needed to be able to skip intro movies manually. The ParkEd instance isn't initialized yet when movies are displayed
+			if (getButton(controller, padbinds.ollie)) {
+				dev->controlData[2] |= 0x01 << 3;
 			}
 		}
-
-
-		// d-pad
-		if (SDL_GameControllerGetButton(controller, (SDL_GameControllerButton)padbinds.up)) {
-			dev->controlData[2] |= 0x01 << 4;
-			dev->controlData[10] = 0xFF;
-		}
-		if (SDL_GameControllerGetButton(controller, (SDL_GameControllerButton)padbinds.right)) {
-			dev->controlData[2] |= 0x01 << 5;
-			dev->controlData[8] = 0xFF;
-		}
-		if (SDL_GameControllerGetButton(controller, (SDL_GameControllerButton)padbinds.down)) {
-			dev->controlData[2] |= 0x01 << 6;
-			dev->controlData[11] = 0xFF;
-		}
-		if (SDL_GameControllerGetButton(controller, (SDL_GameControllerButton)padbinds.left)) {
-			dev->controlData[2] |= 0x01 << 7;
-			dev->controlData[9] = 0xFF;
-		}
-
-		// sticks
-		getStick(controller, padbinds.camera, &(dev->controlData[4]), &(dev->controlData[5]));
-		getStick(controller, padbinds.movement, &(dev->controlData[6]), &(dev->controlData[7]));
-
 	}
 }
 
@@ -391,69 +481,6 @@ uint8_t getKey(SDL_Scancode key) {
 }
 
 int buffer = 0;
-int tauntbuffer = 0;
-
-bool TextInputInNetGame() {
-
-	bool has_keyboard = false;
-	bool has_menu = false;
-	bool has_dialog = false;
-	bool has_quit_dialog = false;
-
-	Script::LazyStruct* checkParams = Script::LazyStruct::s_create();
-
-	// id, keyboard_anchor
-	checkParams->AddChecksum(0x40C698AF, 0x31631B98);
-	has_keyboard = ScriptObjectExists_Native(checkParams);
-	checkParams->Clear();
-
-	// id, current_menu_anchor
-	checkParams->AddChecksum(0x40C698AF, 0xF53D1D83);
-	has_menu = ScriptObjectExists_Native(checkParams);
-	checkParams->Clear();
-
-	// id, dialog_box_Anchor
-	checkParams->AddChecksum(0x40C698AF, 0x3B56E746);
-	has_dialog = ScriptObjectExists_Native(checkParams);
-	checkParams->Clear();
-
-	// id, quit_dialog_anchor
-	checkParams->AddChecksum(0x40C698AF, 0x4C8BF619);
-	has_quit_dialog = ScriptObjectExists_Native(checkParams);
-
-	Script::LazyStruct::s_free(checkParams);
-
-	return (!has_keyboard && !has_menu && !has_dialog && !has_quit_dialog);
-	
-}
-
-void taunt(uint8_t tauntkey) {
-
-	uint8_t modstate = SDL_GetModState();
-
-	if (TextInputInNetGame()) {
-		Script::LazyStruct* checkParams = Script::LazyStruct::s_create();
-
-		switch (tauntkey) {
-		case 1:
-			checkParams->AddChecksum(0xB53D0E0F, 0xE5FD359);	// string_id, props_string
-			break;
-		case 2:
-			checkParams->AddChecksum(0xB53D0E0F, 0xBEEA3518);	// string_id, your_daddy_string
-			break;
-		case 3:
-			checkParams->AddChecksum(0xB53D0E0F, 0x4525ADBD);	// string_id, get_some_string
-			break;
-		case 4:
-			checkParams->AddChecksum(0xB53D0E0F, 0xA36DBEE1);	// string_id, no_way_string
-			break;
-		default:
-			break;
-		}
-		RunScript(0x2C43B5BA, checkParams, nullptr, nullptr); // Script: SendTauntMessage
-		Script::LazyStruct::s_free(checkParams);
-	}
-}
 
 void pollKeyboard(device* dev) {
 
@@ -462,181 +489,221 @@ void pollKeyboard(device* dev) {
 
 	uint8_t* keyboardState = (uint8_t*)SDL_GetKeyboardState(NULL);
 
-	if (buffer > 0)	
+	// Add a bit of delay for certain key presses
+	if (buffer > 0)
 		buffer--;
 
-	if (tauntbuffer > 0)
-		tauntbuffer--;
+	/********************************************************************/
+	/*  STATIC MENU KEYS												*/
+	/*																	*/
+	/*																	*/
+	/*  spinleft = rotate left(2)										*/
+	/*  spinright = rotate right(1)										*/
+	/*  Grind->R														*/
+	/*  Flip->E															*/
+	/*  caveman1->ß zoom out											*/
+	/*  caveman2->´ zoom in												*/
+	/*  Arrow keys for menu												*/
+	/*  S/X->camera up down												*/
+	/*  Y/C->camera left right											*/
+	/*  Keybind for Ollie is disabled									*/
+	/*																	*/
+	/*  ParkEd singleton is initialized after polling begins			*/
+	/*  When a keyboard is on screen, use m_keyinput instead			*/
+	/********************************************************************/
 
-	// ----------------------------------------------
-	// STATIC KEYS
-	// ----------------------------------------------
+	if (!*keyboard_on_screen && ParkEd) {
 
-	// F1 Taunt
-	if (keyboardState[0x3A] && tauntbuffer == 0 && !isKeyboardTyping()) {
-		taunt(1);
-		tauntbuffer = 120;
-	}
+		if (shouldUseMenuControls()) {
 
-	// F2 taunt
-	if (keyboardState[0x3B] && tauntbuffer == 0 && !isKeyboardTyping()) {
-		taunt(2);
-		tauntbuffer = 120;
-	}
+			/********************************************************************/
+			/*																	*/
+			/*  Menu controls													*/
+			/********************************************************************/
 
-	// F3 taunt
-	if (keyboardState[0x3C] && tauntbuffer == 0 && !isKeyboardTyping()) {
-		taunt(3);
-		tauntbuffer = 120;
-	}
-	// F4 taunt (don't send taunt when quitting game with ALT+F4)
-	if (keyboardState[0x3D] && !keyboardState[0xE2] && tauntbuffer == 0 && !isKeyboardTyping()) {
-		taunt(4);
-		tauntbuffer = 120;
-	}
-
-	// Quick chat = RETURN
-	if (keyboardState[0x28] && buffer == 0 && !isKeyboardTyping()) {
-		if (menu_on_screen()) {
-			dev->controlData[3] |= 0x01 << 6;
-			buffer = 15;
-		} else if (*(uint8_t*)(0x7CCDF8)) {
-			CheckChatHotkey();
-			buffer = 10;
+			if (keyboardState[SDL_SCANCODE_SPACE]) {
+				dev->controlData[2] |= 0x01 << 3;
+			}
+			if (keyboardState[SDL_SCANCODE_ESCAPE] && !buffer) {
+				// In menus, ESC simulates the grab button
+				// The ParkEditor is detected as a menu so ESC doesn't work there when only checking for the menu flag
+				// That's why the ParkEd state is checked as well
+				dev->controlData[3] |= 0x01 << 5;
+				buffer = 20;
+			}
+			if (keyboardState[SDL_SCANCODE_E]) {
+				dev->controlData[3] |= 0x01 << 7;
+			}
+			if (keyboardState[SDL_SCANCODE_R]) {
+				dev->controlData[3] |= 0x01 << 4;
+			}
+			if (keyboardState[SDL_SCANCODE_MINUS]) {
+				dev->controlData[20] |= 0x01 << 0;
+			}
+			if (keyboardState[SDL_SCANCODE_EQUALS]) {
+				dev->controlData[20] |= 0x01 << 1;
+			}
+			if (keyboardState[SDL_SCANCODE_S]) {
+				dev->controlData[5] = 0;
+			}
+			if (keyboardState[SDL_SCANCODE_X]) {
+				dev->controlData[5] = 255;
+			}
+			if (keyboardState[SDL_SCANCODE_Z]) {
+				dev->controlData[4] = 0;
+			}
+			if (keyboardState[SDL_SCANCODE_C]) {
+				dev->controlData[4] = 255;
+			}
+			if (keyboardState[SDL_SCANCODE_UP] || keyboardState[keybinds.up]) {
+				dev->controlData[7] = 0;
+			}
+			if (keyboardState[SDL_SCANCODE_DOWN] || keyboardState[keybinds.down]) {
+				dev->controlData[7] = 255;
+			}
+			if (keyboardState[SDL_SCANCODE_LEFT] || keyboardState[keybinds.left]) {
+				dev->controlData[6] = 0;
+			}
+			if (keyboardState[SDL_SCANCODE_RIGHT] || keyboardState[keybinds.right]) {
+				dev->controlData[6] = 255;
+			}
+			if (keyboardState[SDL_SCANCODE_1]) {
+				dev->controlData[3] |= 0x01 << 2;
+			}
+			if (keyboardState[SDL_SCANCODE_2]) {
+				dev->controlData[3] |= 0x01 << 3;
+			}
+			if (keyboardState[SDL_SCANCODE_BACKSPACE]) {
+				dev->controlData[3] |= 0x01 << 5;
+			}
+			if (keyboardState[SDL_SCANCODE_RETURN] && !buffer) {
+				dev->controlData[3] |= 0x01 << 6;
+				buffer = 10;
+			}
 		}
-		
-	}
+		else {
 
-	// Menu = ESC
-	if (keyboardState[0x29] && buffer == 0) {
-		SkateInstance* Skate = (SkateInstance*)*(uint32_t*)(0x007CE478);
-		if (Skate->level == 0xE92ECAFE || !TextInputInNetGame()) {
-			dev->controlData[3] |= 0x01 << 5;
-		} else {
+			/******************************************************************/
+			/*                                                                */
+			/*  Gameplay (in level & CAP editing) controls					  */
+			/******************************************************************/
+
+			if (keyboardState[SDL_SCANCODE_ESCAPE] && !buffer) {
+				dev->controlData[2] |= 0x01 << 3;
+				buffer = 20;
+			}
+			if (keyboardState[keybinds.cameraToggle]) {
+				dev->controlData[2] |= 0x01 << 0;
+			}
+			if (keyboardState[keybinds.cameraSwivelLock]) {
+				dev->controlData[2] |= 0x01 << 2;
+			}
+			if (keyboardState[keybinds.grind]) {
+				dev->controlData[3] |= 0x01 << 4;
+				dev->controlData[12] = 0xff;
+			}
+			if (keyboardState[keybinds.grab]) {
+				dev->controlData[3] |= 0x01 << 5;
+				dev->controlData[13] = 0xff;
+			}
+			if (keyboardState[keybinds.ollie]) {
+				dev->controlData[3] |= 0x01 << 6;
+				dev->controlData[14] = 0xff;
+			}
+			if (keyboardState[keybinds.kick]) {
+				dev->controlData[3] |= 0x01 << 7;
+				dev->controlData[15] = 0xff;
+			}
+			// Merge Switch/Revert + Right Spin for PC controls
+			if (keyboardState[keybinds.rightSpin]) {
+
+				if (ParkEd->m_state == EEditorState::vEDITING) {
+					dev->controlData[3] |= 0x01 << 2; // Raise
+				}
+				else {
+					// Right spin
+					dev->controlData[3] |= 0x01 << 1;
+					dev->controlData[19] = 0xff;
+					// Revert
+					dev->controlData[3] |= 0x01 << 3;
+					dev->controlData[17] = 0xff;
+				}
+			}
+			// Merge Nollie + Left Spin for PC controls
+			if (keyboardState[keybinds.leftSpin]) {
+				if (ParkEd->m_state == EEditorState::vEDITING) {
+					dev->controlData[3] |= 0x01 << 0; // Lower
+				}
+				else {
+					// Spin left
+					dev->controlData[3] |= 0x01 << 2;
+					dev->controlData[16] = 0xff;
+					// Nollie
+					dev->controlData[3] |= 0x01 << 0;
+					dev->controlData[18] = 0xff;
+				}
+			}
+			if (keyboardState[keybinds.caveman]) {
+				dev->controlData[20] |= 0x01 << 0;
+			}
+			if (keyboardState[keybinds.caveman2]) {
+				dev->controlData[20] |= 0x01 << 1;
+			}
+			// ParkEditor item control
+			if (keyboardState[keybinds.item_up]) {
+				dev->controlData[2] |= 0x01 << 4;
+				dev->controlData[10] = 0xFF;
+			}
+			if (keyboardState[keybinds.item_right]) {
+				dev->controlData[2] |= 0x01 << 5;
+				dev->controlData[8] = 0xFF;
+			}
+			if (keyboardState[keybinds.item_down]) {
+				dev->controlData[2] |= 0x01 << 6;
+				dev->controlData[11] = 0xFF;
+			}
+			if (keyboardState[keybinds.item_left]) {
+				dev->controlData[2] |= 0x01 << 7;
+				dev->controlData[9] = 0xFF;
+			}
+			// Sticks - NOTE: Because these keys are very rarely used/important, SOCD handling is just to cancel
+			// right
+			// x
+			if (keyboardState[keybinds.cameraLeft] && !keyboardState[keybinds.cameraRight]) {
+				dev->controlData[4] = 0;
+			}
+			if (keyboardState[keybinds.cameraRight] && !keyboardState[keybinds.cameraLeft]) {
+				dev->controlData[4] = 255;
+			}
+			// y
+			if (keyboardState[keybinds.cameraUp] && !keyboardState[keybinds.cameraDown]) {
+				dev->controlData[5] = 0;
+			}
+			if (keyboardState[keybinds.cameraDown] && !keyboardState[keybinds.cameraUp]) {
+				dev->controlData[5] = 255;
+			}
+			// left
+			// x
+			if (keyboardState[keybinds.left] && !keyboardState[keybinds.right]) {
+				dev->controlData[6] = 0;
+			}
+			if (keyboardState[keybinds.right] && !keyboardState[keybinds.left]) {
+				dev->controlData[6] = 255;
+			}
+			// y
+			if (keyboardState[keybinds.up] && !keyboardState[keybinds.down]) {
+				dev->controlData[7] = 0;
+			}
+			if (keyboardState[keybinds.down] && !keyboardState[keybinds.up]) {
+				dev->controlData[7] = 255;
+			}
+		}
+	}
+	else if (!ParkEd) { // Only needed to be able to skip intro movies manually. The ParkEd instance isn't initialized yet when movies are displayed
+		if (keyboardState[keybinds.ollie] || keyboardState[SDL_SCANCODE_ESCAPE]) {
 			dev->controlData[2] |= 0x01 << 3;
 		}
-		buffer = 10;
 	}
-
-	// ----------------------------------------------
-	// USER KEYS
-	// ----------------------------------------------
-
-	if (keyboardState[keybinds.cameraToggle]) {
-		dev->controlData[2] |= 0x01 << 0;
-	}
-	if (keyboardState[keybinds.focus]) { // no control for left stick on keyboard
-		dev->controlData[2] |= 0x01 << 1;
-	}
-	if (keyboardState[keybinds.cameraSwivelLock]) {
-		dev->controlData[2] |= 0x01 << 2;
-	}
-
-	if (keyboardState[keybinds.grind]) {
-		dev->controlData[3] |= 0x01 << 4;
-		dev->controlData[12] = 0xff;
-	}
-	if (keyboardState[keybinds.grab]) {
-		dev->controlData[3] |= 0x01 << 5;
-		dev->controlData[13] = 0xff;
-	}
-	if (keyboardState[keybinds.ollie]) {
-		dev->controlData[3] |= 0x01 << 6;
-		dev->controlData[14] = 0xff;
-	}
-	if (keyboardState[keybinds.kick]) {
-		dev->controlData[3] |= 0x01 << 7;
-		dev->controlData[15] = 0xff;
-	}
-
-
-	//Switch/Revert +  Right Spin
-	if (keyboardState[keybinds.rightSpin]) {
-		/* revert */
-		dev->controlData[3] |= 0x01 << 1;
-		dev->controlData[19] = 0xff;
-		/* right spin */
-		dev->controlData[3] |= 0x01 << 3;
-		dev->controlData[17] = 0xff;
-	}
-	// Nollie + Left Spin
-	if (keyboardState[keybinds.leftSpin]) {
-		dev->controlData[3] |= 0x01 << 2;
-		dev->controlData[16] = 0xff;
-		dev->controlData[3] |= 0x01 << 0;
-		dev->controlData[18] = 0xff;
-	}
-
-	// Caveman
-	if (keyboardState[keybinds.caveman]) {
-		dev->controlData[20] |= 0x01 << 0;
-	}
-			
-	if (keyboardState[keybinds.caveman2]) {
-		dev->controlData[20] |= 0x01 << 1;
-	}
-
-	// create-a-park item control
-	if (keyboardState[keybinds.item_up]) {
-		dev->controlData[2] |= 0x01 << 4;
-		dev->controlData[10] = 0xFF;
-	}
-	if (keyboardState[keybinds.item_right]) {
-		dev->controlData[2] |= 0x01 << 5;
-		dev->controlData[8] = 0xFF;
-	}
-	if (keyboardState[keybinds.item_down]) {
-		dev->controlData[2] |= 0x01 << 6;
-		dev->controlData[11] = 0xFF;
-	}
-	if (keyboardState[keybinds.item_left]) {
-		dev->controlData[2] |= 0x01 << 7;
-		dev->controlData[9] = 0xFF;
-	}
-
-	// sticks - NOTE: because these keys are very rarely used/important, SOCD handling is just to cancel
-	// right
-	// x
-	if (keyboardState[keybinds.cameraLeft] && !keyboardState[keybinds.cameraRight]) {
-		dev->controlData[4] = 0;
-	}
-	if (keyboardState[keybinds.cameraRight] && !keyboardState[keybinds.cameraLeft]) {
-		dev->controlData[4] = 255;
-	}
-
-	// y
-	if (keyboardState[keybinds.cameraUp] && !keyboardState[keybinds.cameraDown]) {
-		dev->controlData[5] = 0;
-	}
-	if (keyboardState[keybinds.cameraDown] && !keyboardState[keybinds.cameraUp]) {
-		dev->controlData[5] = 255;
-	}
-
-	// left
-	// x
-	if (keyboardState[keybinds.left] && !keyboardState[keybinds.right]) {
-		dev->controlData[6] = 0;
-	}
-	if (keyboardState[keybinds.right] && !keyboardState[keybinds.left]) {
-		dev->controlData[6] = 255;
-	}
-
-	// y
-	if (keyboardState[keybinds.up] && !keyboardState[keybinds.down]) {
-		dev->controlData[7] = 0;
-	}
-	if (keyboardState[keybinds.down] && !keyboardState[keybinds.up]) {
-		dev->controlData[7] = 255;
-	}
-}
-
-// returns 1 if a text entry prompt is on-screen so that keybinds don't interfere with text entry confirmation/cancellation
-uint8_t isKeyboardTyping()
-{
-	uint8_t* keyboard_on_screen = (uint8_t*)0x007CE46E;
-	//if (*keyboard_on_screen)
-		//printf("Keyboard on screen!!!!!\n");
-	return *keyboard_on_screen;
 }
 
 uint8_t menu_on_screen()
@@ -648,371 +715,64 @@ uint8_t menu_on_screen()
 
 }
 
+typedef void (key_input)(int32_t key, uint32_t param);
+key_input* m_keyinput = (key_input*)0x005BDE70;
+
 void do_key_input(SDL_KeyCode key) {
+	
+	if (!*keyboard_on_screen) {
+		if (key == SDLK_RETURN) {
+			m_keyinput(0x19, 0);
+		}
+		else if (key == SDLK_F1) {
+			m_keyinput(0x1f, 0);
+		}
+		else if (key == SDLK_F2) {
+			m_keyinput(0x1c, 0);
+		}
+		else if (key == SDLK_F3) {
+			m_keyinput(0x1d, 0);
+		}
+		else if (key == SDLK_F4 && !(uint8_t*)SDL_GetKeyboardState(NULL)[0xE2]) {
+			m_keyinput(0x1e, 0);
+		}
 
-	//void (*key_input)(int32_t key, uint32_t param) = (void*)0x0062b1f0;
-	typedef void (key_input)(int32_t key, uint32_t param);
-	key_input* m_keyinput = (key_input*)0x005BDE70;
-
-	uint8_t* keyboard_on_screen = (uint8_t*)0x007CE46E;
-	//printf("Menu: %d\n", menu_on_screen());
-	if (!isKeyboardTyping()) {
 		return;
 	}
-
-	/* Language: 7 = GER, 9 = US */
-	/* Update keyboard layout setting */
-	HKL lang = ::GetKeyboardLayout(0);
-	language = PRIMARYLANGID(lang);
-
-	//printf("KEY: %d", key);
 
 	int32_t key_out = 0;
 	uint8_t modstate = SDL_GetModState();
 	uint8_t shift = SDL_GetModState() & KMOD_SHIFT;
 	uint8_t caps = SDL_GetModState() & KMOD_CAPS;
-	uint8_t altgr = SDL_GetModState() & KMOD_RALT;
 
 	if (key == SDLK_RETURN) {
-		key_out = 0x0d;	// CR
+		key_out = 0x0d;    // CR
 	}
 	else if (key == SDLK_BACKSPACE) {
-		key_out = 0x08;	// BS
+		key_out = 0x08;    // BS
 	}
 	else if (key == SDLK_ESCAPE) {
-		key_out = 0x1b;	// ESC
-	}
-	else if (key == SDLK_SPACE) {
-		key_out = ' ';
-	}
-	else if (key >= SDLK_0 && key <= SDLK_9 && !(modstate & KMOD_SHIFT)) {
-		key_out = key;
-	}
-	else if (key != SDLK_q && key >= SDLK_a && key <= SDLK_z) {
-		key_out = key;
-		if (modstate & (KMOD_SHIFT | KMOD_CAPS)) {
-			key_out -= 0x20;
-		}
-	}
-	else if (key == SDLK_MINUS) {
-		if (modstate & KMOD_SHIFT) {
-			key_out = '_';
-		}
-		else {
-			key_out = '-';
-		}
-	}
-	else if (key == SDLK_KP_0) {
-		key_out = '0';
-	}
-	else if (key == SDLK_KP_1) {
-		key_out = '1';
-	}
-	else if (key == SDLK_KP_2) {
-		key_out = '2';
-	}
-	else if (key == SDLK_KP_3) {
-		key_out = '3';
-	}
-	else if (key == SDLK_KP_4) {
-		key_out = '4';
-	}
-	else if (key == SDLK_KP_5) {
-		key_out = '5';
-	}
-	else if (key == SDLK_KP_6) {
-		key_out = '6';
-	}
-	else if (key == SDLK_KP_7) {
-		key_out = '7';
-	}
-	else if (key == SDLK_KP_8) {
-		key_out = '8';
-	}
-	else if (key == SDLK_KP_9) {
-		key_out = '9';
-	}
-	else if (key == SDLK_KP_MINUS) {
-		key_out = '-';
-	}
-	else if (key == SDLK_KP_EQUALS) {
-		key_out = '=';
-	}
-	else if (key == SDLK_KP_PLUS) {
-		key_out = '+';
-	}
-	else if (key == SDLK_KP_DIVIDE) {
-		key_out = '/';
-	}
-	else if (key == SDLK_KP_MULTIPLY) {
-		key_out = '*';
-	}
-	else if (key == SDLK_KP_DECIMAL) {
-		key_out = '.';
+		key_out = 0x1b;    // ESC
 	}
 	else if (key == SDLK_KP_ENTER) {
 		key_out = 0x0d;
 	}
-	else if (language == 9) { /* US */
-		if (key == SDLK_q) {
-			key_out = key;
-			if (modstate & (KMOD_SHIFT | KMOD_CAPS)) {
-				key_out -= 0x20;
-			}
-		}
-		else if (key == SDLK_PERIOD) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = '>';
-			}
-			else {
-				key_out = '.';
-			}
-		}
-		else if (key == SDLK_COMMA) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = '<';
-			}
-			else {
-				key_out = ',';
-			}
-		}
-		else if (key == SDLK_SLASH) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = '?';
-			}
-			else {
-				key_out = '/';
-			}
-		}
-		else if (key == SDLK_SEMICOLON) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = ':';
-			}
-			else {
-				key_out = ';';
-			}
-		}
-		else if (key == SDLK_QUOTE) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = '\"';
-			}
-			else {
-				key_out = '\'';
-			}
-		}
-		else if (key == SDLK_LEFTBRACKET) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = '{';
-			}
-			else {
-				key_out = '[';
-			}
-		}
-		else if (key == SDLK_RIGHTBRACKET) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = '}';
-			}
-			else {
-				key_out = ']';
-			}
-		}
-		else if (key == SDLK_BACKSLASH) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = '|';
-			}
-			else {
-				key_out = '\\';
-			}
-		}
-		else if (key == SDLK_EQUALS) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = '+';
-			}
-			else {
-				key_out = '=';
-			}
-		}
-		else if (key == SDLK_BACKQUOTE) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = '~';
-			}
-			else {
-				key_out = '`';
-			}
-		}
-		else if (key == SDLK_1 && modstate & KMOD_SHIFT) {
-			key_out = '!';
-		}
-		else if (key == SDLK_2 && modstate & KMOD_SHIFT) {
-			key_out = '@';
-		}
-		else if (key == SDLK_3 && modstate & KMOD_SHIFT) {
-			key_out = '#';
-		}
-		else if (key == SDLK_4 && modstate & KMOD_SHIFT) {
-			key_out = '$';
-		}
-		else if (key == SDLK_5 && modstate & KMOD_SHIFT) {
-			key_out = '%';
-		}
-		else if (key == SDLK_6 && modstate & KMOD_SHIFT) {
-			key_out = '^';
-		}
-		else if (key == SDLK_7 && modstate & KMOD_SHIFT) {
-			key_out = '&';
-		}
-		else if (key == SDLK_8 && modstate & KMOD_SHIFT) {
-			key_out = '*';
-		}
-		else if (key == SDLK_9 && modstate & KMOD_SHIFT) {
-			key_out = '(';
-		}
-		else if (key == SDLK_0 && modstate & KMOD_SHIFT) {
-			key_out = ')';
-		}
-		else {
-			key_out = -1;
-		}
+	else {
+		key_out = -1;
 	}
-	else if (language == 7) { /* GER */
-		if (key == SDLK_q && modstate & KMOD_CTRL) {
-			key_out = '@';
-		}
-		else if (key == SDLK_q) {
-			key_out = key;
-			if (modstate & (KMOD_SHIFT | KMOD_CAPS)) {
-				key_out -= 0x20;
-			}		
-		}
-		else if (key == SDL_GetKeyFromScancode(SDL_SCANCODE_LEFTBRACKET)) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = 'Ü';
-			}
-			else {
-				key_out = 'ü';
-			}
-		}
-		else if (key == SDL_GetKeyFromScancode(SDL_SCANCODE_SEMICOLON)) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = 'Ö';
-			}
-			else {
-				key_out = 'ö';
-			}
-		}
-		else if (key == SDL_GetKeyFromScancode(SDL_SCANCODE_APOSTROPHE)) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = 'Ä';
-			}
-			else {
-				key_out = 'ä';
-			}
-		}
-		else if (key == SDL_GetKeyFromScancode(SDL_SCANCODE_NONUSHASH)) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = '\'';
-			}
-			else {
-				key_out = '#';
-			}
-		}
-		else if (key == SDL_GetKeyFromScancode(SDL_SCANCODE_RIGHTBRACKET)) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = '*';
-			}
-			else {
-				key_out = '+';
-			}
-		}
-		else if (key == SDL_GetKeyFromScancode(SDL_SCANCODE_RIGHTBRACKET)) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = '*';
-			}
-			else {
-				key_out = '+';
-			}
-		}
-		else if (key == SDL_GetKeyFromScancode(SDL_SCANCODE_PERIOD)) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = ':';
-			}
-			else {
-				key_out = '.';
-			}
-		}
-		else if (key == SDL_GetKeyFromScancode(SDL_SCANCODE_COMMA)) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = '\;'; /* not supported, will print ':' instead */
-			}
-			else {
-				key_out = ',';
-			}
-		}
-		else if (key == SDL_GetKeyFromScancode(SDL_SCANCODE_NONUSBACKSLASH)) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = '>';
-			}
-			else {
-				key_out = '<';
-			}
-		}
-		else if (key == SDL_GetKeyFromScancode(SDL_SCANCODE_MINUS)) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = '?';
-			}
-			else if (modstate & KMOD_CTRL) {
-				key_out = '\\';
-			}
-			else {
-				key_out = 'ß';
-			}
-		}
-		else if (key == SDLK_1 && modstate & KMOD_SHIFT) {
-			key_out = '!';
-		}
-		/*
-		else if (key == SDLK_2 && modstate & KMOD_SHIFT) { // not supported
-			key_out = '\"';
-		}
-		else if (key == SDLK_3 && modstate & KMOD_SHIFT) {
-			key_out = '§';
-		}
-		*/
-		else if (key == SDLK_4 && modstate & KMOD_SHIFT) {
-			key_out = '$';
-		}
-		/*
-		else if (key == SDLK_5 && modstate & KMOD_SHIFT) { // not supported
-			key_out = '%';
-		}
-		*/
-		else if (key == SDLK_6 && modstate & KMOD_SHIFT) {
-			key_out = '&';
-		}
-		else if (key == SDLK_7 && modstate & KMOD_SHIFT) {
-			key_out = '/';
-		}
-		else if (key == SDLK_8 && modstate & KMOD_SHIFT) {
-			key_out = '(';
-		}
-		else if (key == SDLK_9 && modstate & KMOD_SHIFT) {
-			key_out = ')';
-		}
-		else if (key == SDLK_0 && modstate & KMOD_SHIFT) {
-			key_out = '=';
-		}
-		/*
-		else if (key == SDL_GetKeyFromScancode(SDL_SCANCODE_GRAVE)) {
-			if (modstate & KMOD_SHIFT) {
-				key_out = '`';
-			}
-			else {
-				key_out = '´';
-			}
-		}
-		*/ // accents need more work
+
+	if (key_out != -1) {
+		m_keyinput(key_out, 0);
 	}
-	m_keyinput(key_out, 0);
+}
+
+void do_text_input(char* text) {
+	if (strlen(text) == 1) {
+		m_keyinput(text[0], 0);
+	}
+	else {
+		Log::TypedLog(CHN_SDL, "Input text '%s' > 1 byte!!\n");
+	}
 }
 
 void processEvent(SDL_Event* e) {
@@ -1080,17 +840,22 @@ void processEvent(SDL_Event* e) {
 		//Without this, game freezes while alt-tabbing
 		if (!(*(int*)0x00786A9C)) {
 			if (e->window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
+				printf("GAINED\n");
 				*(int*)ADDR_IsFocused = 1;
 				*(int*)ADDR_OtherIsFocused = 1;
 				return;
 			}
 			else if (e->window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
+				printf("LOST\n");
 				*(int*)ADDR_IsFocused = 0;
 				*(int*)ADDR_OtherIsFocused = 0;
 				return;
 			}
 		}
 	}
+	case SDL_TEXTINPUT:
+		do_text_input(e->text.text);
+		return;
 	default:
 		return;
 	}
@@ -1173,7 +938,7 @@ void __cdecl processController(device* dev) {
 		dev->isValid = 1;
 		dev->isPluggedIn = 1;
 
-		if (!isKeyboardTyping()) {
+		if (!*keyboard_on_screen) {
 			pollKeyboard(dev);
 		}
 	}
@@ -1331,15 +1096,11 @@ void patchInput() {
 	patchThisToCdecl((void*)0x005BDCC0, &processController);
 	patchBytesM((void*)(0x005BDCC0 + 7), (BYTE*)"\xC2\x04\x00", 3); //ret 4
 
-	// TEST
-
-	//patchCall((void*)0x005BE1A7, mywrapper);
-
-
-
 	// set_actuator
 	// don't call read_data in activate_actuators
-	patchNop((void*)0x005BDA31, 7);
+	//patchNop((void*)0x005BDA31, 7);
+	patchCall((void*)0x005BDA31, initializeInstance);
+	patchNop((void*)(0x005BDA31 + 5), 2);
 	patchCall((void*)0x005BDAB6, set_actuators);
 	patchCall((void*)0x005BDB17, set_actuators);
 	patchCall((void*)0x005BDBBF, set_actuators);
@@ -1352,16 +1113,7 @@ void patchInput() {
 
 	// some config call relating to the dinput devices
 	patchNop((void*)0x004E2C16, 5);
-}
 
-
-void CheckChatHotkey() {
-
-	// We know the key is pressed. We need to make sure that
-	// we're not in a menu, dialog box, etc.
-
-	if (TextInputInNetGame) {
-		// enter_kb_chat
-		RunScript(0x3B4548B8, nullptr, nullptr, nullptr);
-	}
+	// Patch F1 button for taunt
+	patchByte((void*)(0x00533651 + 1), 0x1F);
 }
