@@ -771,7 +771,9 @@ void do_text_input(char* text) {
 		m_keyinput(text[0], 0);
 	}
 	else {
-		Log::TypedLog(CHN_SDL, "Input text '%s' > 1 byte!!\n");
+		if ((text[0] & 0xFF) == 0xC3)
+			m_keyinput((text[1] & 0xFF) + 0x40, 1);
+		//Log::TypedLog(CHN_SDL, "Input text '%s' > 1 byte!!\n");
 	}
 }
 
