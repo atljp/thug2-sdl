@@ -83,6 +83,7 @@ void initPatch() {
 	graphics_settings.distanceclipping = getIniBool(GRAPHICS_SECTION, "DistanceClipping", 0, configFile);
 	graphics_settings.clippingdistance = GetPrivateProfileInt("Graphics", "ClippingDistance", 100, configFile);
 	graphics_settings.fog = getIniBool(GRAPHICS_SECTION, "Fog", 0, configFile);
+    graphics_settings.blurfix = getIniBool(GRAPHICS_SECTION, "UseBlurFix", 1, configFile);
 	resX = GetPrivateProfileInt(GRAPHICS_SECTION, "ResolutionX", 640, configFile);
 	resY = GetPrivateProfileInt(GRAPHICS_SECTION, "ResolutionY", 480, configFile);
 	isWindowed = getIniBool(GRAPHICS_SECTION, "Windowed", 0, configFile);
@@ -170,10 +171,12 @@ void initPatch() {
 	/* Graphic settings */
 	if (graphics_settings.bettergraphics) {
 		/* Slight graphical improvements */
-		patchNop((void*)0x0044F045, 8);
-		patchNop((void*)0x0048C330, 5); // This breaks flash effects 
-		patchNop((void*)0x004B2DC4, 5);
-		patchNop((void*)0x004B3405, 5);
+        if(graphics_settings.blurfix) {
+            patchNop((void*)0x0044F045, 8);
+            patchNop((void*)0x0048C330, 5); // This breaks flash effects 
+            patchNop((void*)0x004B2DC4, 5);
+            patchNop((void*)0x004B3405, 5);
+        }
 		/* very high shadow quality */
 		patchByte((void*)(0x004A19E5 + 2), 0x04); 
 		patchByte((void*)(0x004A19EA + 2), 0x04);
@@ -228,7 +231,7 @@ void patchStaticValues() {
 	patchByte((void*)(0x005BBCD9 + 4), 0x10);
 
 	/* Blur fix (since Windows Vista) */
-	patchBytesM((void*)ADDR_FUNC_BlurEffect, (BYTE*)"\xB0\x01\xC3\x90\x90", 5);
+	if (graphics_settings.blurfix) patchBytesM((void*)ADDR_FUNC_BlurEffect, (BYTE*)"\xB0\x01\xC3\x90\x90", 5);
 
 	/* No CAS integrity check */
 	patchNop((void*)0x005A8A01, 2);
@@ -561,7 +564,7 @@ uint32_t patchButtonLookup(char* p_button) {
 	0x17 = ESC
 	0x18 = E
 	0x19 = R
-	0x1A = ß
+	0x1A = ï¿½
 	0x1B = `
 	0x1C = 1
 	0x1D = 2

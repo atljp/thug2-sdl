@@ -133,6 +133,7 @@ typedef struct {
 	uint32_t distanceclipping;
 	uint32_t clippingdistance;
 	uint32_t fog;
+    uint32_t blurfix;
 } graphicsSettings;
 
 struct inputsettings {
