@@ -83,7 +83,7 @@ void initPatch() {
 	graphics_settings.distanceclipping = getIniBool(GRAPHICS_SECTION, "DistanceClipping", 0, configFile);
 	graphics_settings.clippingdistance = GetPrivateProfileInt("Graphics", "ClippingDistance", 100, configFile);
 	graphics_settings.fog = getIniBool(GRAPHICS_SECTION, "Fog", 0, configFile);
-    graphics_settings.blurfix = getIniBool(GRAPHICS_SECTION, "UseBlurFix", 1, configFile);
+	graphics_settings.blurfix = getIniBool(GRAPHICS_SECTION, "UseBlurFix", 1, configFile);
 	resX = GetPrivateProfileInt(GRAPHICS_SECTION, "ResolutionX", 640, configFile);
 	resY = GetPrivateProfileInt(GRAPHICS_SECTION, "ResolutionY", 480, configFile);
 	isWindowed = getIniBool(GRAPHICS_SECTION, "Windowed", 0, configFile);
