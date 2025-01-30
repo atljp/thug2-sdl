@@ -20,6 +20,7 @@ void __cdecl set_actuators(int port, uint16_t hight, uint16_t low);
 uint8_t* isMenu = (uint8_t*)0x007CE46F;
 uint8_t* keyboard_on_screen = (uint8_t*)0x007CE46E;
 uint8_t* isCAG = (uint8_t*)0x0069BAA8;//0x006A0350;
+uint8_t* isFocus = (uint8_t*)0x006F8608;
 
 enum EEditorState
 {
@@ -119,6 +120,7 @@ void initializeInstance() {
 }
 
 bool shouldUseMenuControls() {
+    if(*isFocus==0) return false;
 	return (*isMenu && !(ParkEd->m_state == EEditorState::vEDITING) || *isCAG || ((ParkEd->m_state == EEditorState::vEDITING) && ParkEd->m_paused));
 }
 
@@ -360,6 +362,9 @@ void pollController(device* dev, SDL_GameController* controller) {
 				if (getButton(controller, padbinds.cameraSwivelLock)) {
 					dev->controlData[2] |= 0x01 << 2;
 				}
+                if (getButton(controller, padbinds.focus)) {
+                    dev->controlData[2] |= 0x01 << 1;
+                }
 				if (getButton(controller, padbinds.grind)) {
 					dev->controlData[3] |= 0x01 << 4;
 					dev->controlData[12] = 0xff;
@@ -501,8 +506,8 @@ void pollKeyboard(device* dev) {
 	/*  spinright = rotate right(1)										*/
 	/*  Grind->R														*/
 	/*  Flip->E															*/
-	/*  caveman1->ß zoom out											*/
-	/*  caveman2->´ zoom in												*/
+	/*  caveman1->ï¿½ zoom out											*/
+	/*  caveman2->ï¿½ zoom in												*/
 	/*  Arrow keys for menu												*/
 	/*  S/X->camera up down												*/
 	/*  Y/C->camera left right											*/
@@ -597,6 +602,9 @@ void pollKeyboard(device* dev) {
 			}
 			if (keyboardState[keybinds.cameraSwivelLock]) {
 				dev->controlData[2] |= 0x01 << 2;
+			}
+            if (keyboardState[keybinds.focus]) {
+				dev->controlData[2] |= 0x01 << 1;
 			}
 			if (keyboardState[keybinds.grind]) {
 				dev->controlData[3] |= 0x01 << 4;

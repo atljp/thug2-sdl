@@ -64,10 +64,17 @@ void InitInstance(HANDLE hModule) {
 
 void LoadOriginalDll(void) {
     char buffer[MAX_PATH];
-    
-    // Getting path to system dir and to d3d9.dll
-	GetSystemDirectory(buffer,MAX_PATH);
+    char configFile[MAX_PATH];
 
+    getConfigFilePath(configFile);
+
+    if(getIniBool(GRAPHICS_SECTION, "UseDXVK", 0, configFile)) {
+        strcpy(buffer, ".\\dxvk");
+    } else {
+        // Getting path to system dir and to d3d9.dll
+        GetSystemDirectory(buffer, MAX_PATH);
+    }
+    
 	// Append dll name
 	strcat_s(buffer, sizeof buffer, "\\d3d9.dll");
 	
