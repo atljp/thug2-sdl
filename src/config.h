@@ -28,7 +28,7 @@ void InitInstance(HANDLE hModule);
 void LoadOriginalDll(void);
 void ExitInstance(void);
 
-#define CONFIG_FILE_NAME "partymod.ini"
+#define CONFIG_FILE_NAME "thug2sdl.ini"
 #define GRAPHICS_SECTION "Graphics"
 #define KEYBIND_SECTION "Keybinds"
 #define CONTROLLER_SECTION "Gamepad"
@@ -36,9 +36,14 @@ void ExitInstance(void);
 #define GAMEPLAY_SECTION "Gameplay"
 #define EXTRA_SECTION "Extra"
 #define CONTROLS_SECTION "Controls"
+#define CHAT_SECTION "Chat"
 #define MOD_SECTION "AdditionalMods"
+#define KEYBIND_SECTION	"Keybinds"
+#define CONTROLLER_SECTION "Gamepad"
+#define LOG_SECTION "Log"
+
 #define VERSION_NUMBER_MAJOR 0
-#define VERSION_NUMBER_MINOR 6
+#define VERSION_NUMBER_MINOR 7
 
 struct keybinds {
 	//SDL_Scancode menu;
@@ -158,6 +163,11 @@ struct modsettings {
 	char* windowtitle;
 };
 
+struct logsettings {
+	bool writefile;
+	bool appendlog;
+};
+
 struct flashVertex {
 	float x, y, z, w;
 	uint32_t color;
@@ -171,7 +181,8 @@ void patchWindow();
 SDL_Window* getWindowHandle();
 void initPatch();
 void patchStaticValues();
-//void reorderFlashVertices(uint32_t* d3dDevice, void* unused, void* alsodevice, uint32_t prim, uint32_t count, struct flashVertex* vertices, uint32_t stride);
+void fastExit();
+void __fastcall reorderFlashVertices(void* unused, uint32_t* d3dDevice, void* alsodevice, uint32_t prim, uint32_t count, struct flashVertex* vertices, uint32_t stride);
 void loadInputSettings(struct inputsettings* settingsOut);
 void loadControllerBinds(struct controllerbinds* bindsOut);
 void loadKeyBinds(struct keybinds* bindsOut);
@@ -188,5 +199,6 @@ void loadModSettings(struct modsettings* modsettingsOut);
 void getConfigFilePath(char mConfigFile[MAX_PATH]);
 void wallrideanywhere_patch();
 void WalkCamComponent_Update_Hook();
+void loadLogSettings(struct logsettings* settingsOut);
 void loadKeyBinds(struct keybinds* bindsOut);
 void loadControllerBinds(struct controllerbinds* bindsOut);

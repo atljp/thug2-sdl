@@ -1,6 +1,3 @@
-#define KEYBIND_SECTION				"Keybinds"
-#define CONTROLLER_SECTION			"Gamepad"
-
 #define STOCK_CFUNC_COUNT			1254
 #define CUSTOM_CFUNC_COUNT			512
 

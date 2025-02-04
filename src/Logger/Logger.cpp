@@ -4,11 +4,13 @@ bool l_ExitOnAssert = true;
 bool l_UseConsole, l_DebugOutput;
 FILE* CON, * f_tracer, * f_logger;
 HANDLE consoleHandle;
+struct logsettings mLogSettings;
 
 namespace Log {
 
 	bool ConsoleAllowed() { return l_UseConsole; }
-	bool OutputAllowed() { return l_DebugOutput; }
+	bool OutputAllowed() { return mLogSettings.writefile; }
+	bool AppendAllowed() { return mLogSettings.appendlog; }
 
 	//------------------------
 	// Prepare the logger
@@ -17,11 +19,12 @@ namespace Log {
 	void Initialize() {
 		char logpath[MAX_PATH];
 		char tracepath[MAX_PATH];
+		loadLogSettings(&mLogSettings);
 
 		//if (GameConfig::GetValue("Logger", "Console", 0))
-			l_UseConsole = true;
+		l_UseConsole = true;
 		//if (GameConfig::GetValue("Logger", "WriteFile", 1))
-			l_DebugOutput = false;
+		l_DebugOutput = false;
 
 		//l_ExitOnAssert = GameConfig::GetValue("Logger", "ExitOnAssert", 1);
 
@@ -29,7 +32,7 @@ namespace Log {
 		if (l_UseConsole)
 		{
 			AllocConsole();
-			SetConsoleTitle("THUG2 CONSOLE WINDOW");
+			SetConsoleTitle("THUG CONSOLE WINDOW");
 			freopen_s(&CON, "CONIN$", "r", stdin);
 			freopen_s(&CON, "CONOUT$", "w", stdout);
 			freopen_s(&CON, "CONOUT$", "w", stderr);
@@ -40,16 +43,19 @@ namespace Log {
 		}
 
 		// Write to debug file?
-		if (l_DebugOutput)
+		if (OutputAllowed())
 		{
 			//Log("Logger file output initialized.\n");
-			fopen_s(&f_logger, "debug.txt", "w");
-			fopen_s(&f_tracer, "trace.txt", "w");
+			if (AppendAllowed())
+				fopen_s(&f_logger, "debug.txt", "a");
+			else
+				fopen_s(&f_logger, "debug.txt", "w");
+			//fopen_s(&f_tracer, "trace.txt", "w");
 
 			if (!f_logger)
 				PrintLog("Failed to create debug.txt file.\n");
-			if (!f_tracer)
-				PrintLog("Failed to create trace.txt file.\n");
+			//if (!f_tracer)
+			//	PrintLog("Failed to create trace.txt file.\n");
 		}
 	}
 
@@ -68,6 +74,22 @@ namespace Log {
 			fputs(to_log, f_logger);
 			fflush(f_logger);
 		}
+	}
+
+	//------------------------
+	// Prints log message, with arguments!
+	//------------------------
+
+	void Log(const char* Format, ...)
+	{
+		char final_buffer[2000];
+
+		va_list args;
+		va_start(args, Format);
+		vsnprintf(final_buffer, 2000, Format, args);
+		va_end(args);
+
+		CoreLog(final_buffer, CHN_LOG);
 	}
 
 	//------------------------
@@ -100,6 +122,29 @@ namespace Log {
 		CoreLog(final_buffer, category);
 	}
 
+	//------------------------
+	// Print a nasty error!
+	//------------------------
+
+	void Error(const char* Format, ...)
+	{
+		//THAWPlus::DebugScriptCallstack();
+
+		char final_buffer[2000];
+
+		va_list args;
+		va_start(args, Format);
+		vsnprintf(final_buffer, 2000, Format, args);
+		va_end(args);
+
+		char finalString[2048];
+		sprintf(finalString, "CRITICAL: %s", final_buffer);
+		Log("%s\n\n", finalString);
+
+		MessageBox(NULL, final_buffer, "Critical Error", MB_ICONERROR);
+
+		ExitProcess(0);
+	}
 
 	//------------------------
 	// Format string from pParams (built-in function)

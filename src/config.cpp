@@ -22,60 +22,79 @@ uint32_t Cam_GetComponent_Native_Var = 0x0045DB90;
 uint32_t AddShake_Native_Var = 0x004F9F00;
 uint32_t WallRideAnywhere_RetAddr = 0x00500468;
 
-uint8_t isWindowed;
-int8_t isBorderless;
-uint8_t console;
-uint8_t language;
-uint8_t buttonfont;
-uint8_t intromovies;
-uint8_t spindelay;
-uint8_t airdrift;
-uint8_t walkspin;
-uint8_t dropdowncontrol;
-uint8_t boardscuffs;
-uint8_t Ps2Controls;
-uint8_t quickgetup;
-uint8_t invertRXplayer1;
-uint8_t invertRYplayer1;
+bool isWindowed;
+bool isBorderless;
+bool console;
+bool intromovies;
+bool spindelay;
+bool airdrift;
+bool walkspin;
+bool boardscuffs;
+bool Ps2Controls;
+bool quickgetup;
+bool invertRXplayer1;
+bool invertRYplayer1;
+bool disableRXplayer1;
+bool disableRYplayer1;
 bool usemod = false;
 bool noadditionalscriptmods = false;
+bool writefile;
+bool appendlog;
+bool exceptionhandler;
+bool savewindowposition;
 
 int resX;
 int resY;
 int defWidth;
 int defHeight;
+int windowposx;
+int windowposy;
+
+uint8_t language;
+uint8_t buttonfont;
+uint8_t dropdowncontrol;
+uint8_t laddergrabcontrol;
+uint8_t cavemancontrol;
+uint8_t menubuttons;
+uint8_t consolewaittime;
+
 graphicsSettings graphics_settings;
 
-typedef uint32_t ButtonLookup_NativeCall(char* button);
-ButtonLookup_NativeCall* ButtonLookup_Native = (ButtonLookup_NativeCall*)(0x004020E0);
 
-typedef uint32_t __cdecl unkButtonMap_NativeCall(uint32_t buttonmap);
-unkButtonMap_NativeCall* unkButtonMap_Native = (unkButtonMap_NativeCall*)(0x00479070);
+typedef uint32_t dehexifyDigit_NativeCall(char* button);
+dehexifyDigit_NativeCall* dehexifyDigit_Native = (dehexifyDigit_NativeCall*)(0x004020E0);
+
+typedef uint32_t __cdecl GlobalGetArrayAsInt_NativeCall(uint32_t buttonmap);
+GlobalGetArrayAsInt_NativeCall* GlobalGetArrayAsInt_Native = (GlobalGetArrayAsInt_NativeCall*)(0x00479070);
+
+/* -=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=- */
+/* -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- Init =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- */
+/* -=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=- */
 
 void initPatch() {
-	/* First, patch static values into the exe */
 	patchStaticValues();
-
-	/* Copy CFuncs to our own area which can be searched and expanded */
-	CFuncs::CopyStockFunctions();
-
-	/* Make game refer to our function list */
-	patchDWord((void*)ADDR_CFuncListRef, CFuncs::Pointer_Functions());
-
-	/* Refer to new function for grabbing amount of CFuncs */
-	patchCall((void*)ADDR_CFuncCountRef, (void*)CFuncs::Pointer_FunctionCount());
-
-	/* Read INI config values */
 	getConfigFilePath(configFile);
 
+	/* Copy CFuncs to our own area which can be searched and expanded*/
+	CFuncs::CopyStockFunctions();
+
+	/*Make game refer to our function list*/
+	patchDWord((void*)ADDR_CFuncListRef, CFuncs::Pointer_Functions());
+
+	/*Refer to new function for grabbing amount of CFuncs*/
+	patchCall((void*)ADDR_CFuncCountRef, (void*)CFuncs::Pointer_FunctionCount());
+
 	console = GetPrivateProfileInt(MISC_SECTION, "Console", 0, configFile);
+	writefile = getIniBool(LOG_SECTION, "WriteFile", 0, configFile);
+	appendlog = getIniBool(LOG_SECTION, "AppendLog", 0, configFile);
+	exceptionhandler = getIniBool(LOG_SECTION, "ExceptionHandler", 0, configFile);
 	language = GetPrivateProfileInt(MISC_SECTION, "Language", 1, configFile);
 	buttonfont = GetPrivateProfileInt(MISC_SECTION, "ButtonFont", 1, configFile);
 	intromovies = getIniBool(MISC_SECTION, "IntroMovies", 1, configFile);
+	boardscuffs = getIniBool(MISC_SECTION, "Boardscuffs", 1, configFile);
 	spindelay = getIniBool(GAMEPLAY_SECTION, "SpinDelay", 1, configFile);
 	airdrift = getIniBool(GAMEPLAY_SECTION, "THUGAirDrift", 0, configFile);
 	walkspin = getIniBool(GAMEPLAY_SECTION, "WalkSpin", 1, configFile);
-	boardscuffs = getIniBool(MISC_SECTION, "Boardscuffs", 1, configFile);
 	noadditionalscriptmods = getIniBool(MISC_SECTION, "NoAdditionalScriptMods", 0, configFile);
 	graphics_settings.bettergraphics = getIniBool(GRAPHICS_SECTION, "BetterGraphics", 0, configFile);
 	graphics_settings.antialiasing = getIniBool(GRAPHICS_SECTION, "AntiAliasing", 0, configFile);
@@ -90,23 +109,92 @@ void initPatch() {
 	isBorderless = getIniBool(GRAPHICS_SECTION, "Borderless", 0, configFile);
 	Ps2Controls = getIniBool(CONTROLS_SECTION, "Ps2Controls", 1, configFile);
 	dropdowncontrol = GetPrivateProfileInt(CONTROLS_SECTION, "DropDownControl", 1, configFile);
+	laddergrabcontrol = GetPrivateProfileInt(CONTROLS_SECTION, "LadderGrabKey", 1, configFile);
+	cavemancontrol = GetPrivateProfileInt(CONTROLS_SECTION, "CavemanKey", 1, configFile);
 	quickgetup = GetPrivateProfileInt(GAMEPLAY_SECTION, "QuickGetUp", 0, configFile);
 	invertRXplayer1 = getIniBool(CONTROLS_SECTION, "InvertRXPlayer1", 0, configFile);
 	invertRYplayer1 = getIniBool(CONTROLS_SECTION, "InvertRYPlayer1", 0, configFile);
+	disableRXplayer1 = getIniBool(CONTROLS_SECTION, "DisableRXPlayer1", 0, configFile);
+	disableRYplayer1 = getIniBool(CONTROLS_SECTION, "DisableRYPlayer1", 0, configFile);
+	savewindowposition = getIniBool(GRAPHICS_SECTION, "SaveWindowPosition", 0, configFile);
+	windowposx = GetPrivateProfileInt(GRAPHICS_SECTION, "WindowPosX", SDL_WINDOWPOS_CENTERED, configFile);
+	windowposy = GetPrivateProfileInt(GRAPHICS_SECTION, "WindowPosY", SDL_WINDOWPOS_CENTERED, configFile);
+	menubuttons = GetPrivateProfileInt(CONTROLS_SECTION, "MenuButtons", 1, configFile);
+	consolewaittime = GetPrivateProfileInt(CHAT_SECTION, "ChatWaitTime", 30, configFile);
 	usemod = getIniBool(MOD_SECTION, "UseMod", 0, configFile);
 
-	/* Allocate console */
+	/*Allocate console*/
 	if (console) {
 		Log::Initialize();
 		patchDWord((void*)0x0067F3D4, (uint32_t)&Log::CFunc_PrintF);
 		if (console == 2) { patchJump((void*)0x00401C30, &Log::PrintLog); }
 	}
-	Log::TypedLog(CHN_DLL, "PARTYMOD for THUG2 %d.%d\n", VERSION_NUMBER_MAJOR, VERSION_NUMBER_MINOR);
+
+	//TODO
+	/*Register error handler*/
+	//if (exceptionhandler) {
+	//	CFuncs::RedirectFunction("ScriptAssert", (void*)Log::CFunc_ScriptAssert);
+	//	ErrorManager::Initialize();
+	//	ErrorManager::IgnoreVectoredExceptions(true);
+	//}
+
+	Log::TypedLog(CHN_DLL, "THUG SDL %d.%d\n", VERSION_NUMBER_MAJOR, VERSION_NUMBER_MINOR);
 	Log::TypedLog(CHN_DLL, "DIRECTORY: %s\n", (LPSTR)executableDirectory);
 	Log::TypedLog(CHN_DLL, "Patch initialized\n");
 	Log::TypedLog(CHN_DLL, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Initializing INI settings\n");
+	Log::TypedLog(CHN_DLL, "Intro movies\t\t\t\t\t%s\n", intromovies ? "Enabled" : "Disabled");
+	Log::TypedLog(CHN_DLL, "Button font\t\t\t\t\t%s\n", (buttonfont == 2) ? "Ps2" : ((buttonfont == 3) ? "Xbox" : ((buttonfont == 4) ? "NGC" : "PC")));
+	Log::TypedLog(CHN_DLL, "Ps2Controls\t\t\t\t\t%s\n", Ps2Controls ? "Enabled" : "Disabled");
+	Log::TypedLog(CHN_DLL, "AirDrift: %s\n", airdrift ? "Enabled" : "Disabled");
+	Log::TypedLog(CHN_DLL, "WalkSpin: %s\n", walkspin ? "Enabled (THUG2)" : "Disabled (THUG)");
+	Log::TypedLog(CHN_DLL, "Quick bail get up: %s\n", quickgetup ? "Enabled" : "Disabled");
+	Log::TypedLog(CHN_DLL, "Language setting\t\t\t\t\t%s\n", (language == 1) ? "English" : ((language == 2) ? "French" : ((language == 3) ? "German" : "English")));
+	Log::TypedLog(CHN_DLL, "Shadow Quality\t\t\t\t\t%s\n", graphics_settings.hqshadows ? (graphics_settings.hqshadows == 2) ? "Very High" : "High" : "Default");
+	Log::TypedLog(CHN_DLL, "Fullscreen Anti-Aliasing\t\t\t\t%s\n", graphics_settings.antialiasing ? "Enabled" : "Disabled");
+	Log::TypedLog(CHN_DLL, "Distance Clipping\t\t\t\t\t%s\n", graphics_settings.distanceclipping ? "Enabled" : "Disabled");
+	Log::TypedLog(CHN_DLL, "Better graphics for shadows and edges: %s\n", graphics_settings.bettergraphics ? "Enabled" : "Disabled");
+	Log::TypedLog(CHN_DLL, "Invert player 1 camera X axis (right stick)\t%s\n", invertRXplayer1 ? "Enabled" : "Disabled");
+	Log::TypedLog(CHN_DLL, "Invert player 1 camera Y axis (right stick)\t%s\n", invertRYplayer1 ? "Enabled" : "Disabled");
+	Log::TypedLog(CHN_DLL, "Player 1 camera X axis (right stick)\t\t%s\n", disableRXplayer1 ? "Disabled" : "Enabled");
+	Log::TypedLog(CHN_DLL, "Player 1 camera Y axis (right stick)\t\t%s\n", disableRYplayer1 ? "Disabled" : "Enabled");
+	Log::TypedLog(CHN_DLL, "Resolution from INI\t\t\t\t%d x %d\n", resX, resY);
+	Log::TypedLog(CHN_DLL, "Window mode\t\t\t\t\t%s \n", (isWindowed && !isBorderless) ? "Enabled (default)" : ((isWindowed && isBorderless) ? "Enabled (borderless)" : "Disabled"));
+	Log::TypedLog(CHN_DLL, "Additional Script Mods\t\t\t\t%s\n", noadditionalscriptmods ? "Disabled" : "Enabled");
+	Log::TypedLog(CHN_DLL, "SpinDelay: %s\n", spindelay ? "Enabled (PC default)" : "Disabled (Ps2 default)");
+	Log::TypedLog(CHN_DLL, "BoardScuffs: %s\n", boardscuffs ? "Enabled" : "Disabled");
+	Log::TypedLog(CHN_DLL, "Chat message time\t\t\t\t\t%d seconds\n", consolewaittime);
+	Log::TypedLog(CHN_DLL, "MenuButtons\t\t\t\t\t%s\n", (menubuttons == 2) ? "Ps2" : "PC (default)");
 
-	/* Set language */
+	if (graphics_settings.distanceclipping) {
+		Log::TypedLog(CHN_DLL, "Clipping Distance\t\t\t\t\t%d\n", graphics_settings.clippingdistance);
+		Log::TypedLog(CHN_DLL, "Fog\t\t\t\t\t\t%s\n", graphics_settings.fog ? "Enabled" : "Disabled");
+	}
+	
+	switch (dropdowncontrol) {
+		case 1: Log::TypedLog(CHN_DLL, "DropDownControl: L2+R2 (PC default)\n"); break;
+		case 2: Log::TypedLog(CHN_DLL, "DropDownControl: L1\n"); break;
+		case 3: Log::TypedLog(CHN_DLL, "DropDownControl: R1\n"); break;
+		case 4: Log::TypedLog(CHN_DLL, "DropDownControl: L2\n"); break;
+		case 5: Log::TypedLog(CHN_DLL, "DropDownControl: R2\n"); break;
+	}
+	switch (laddergrabcontrol) {
+
+	}
+	switch (cavemancontrol) {
+
+	}
+	
+	if (consolewaittime < 1 || consolewaittime > 120) consolewaittime = 30;
+	
+	if (savewindowposition)
+		Log::TypedLog(CHN_DLL, "Found saved window position\t\t\t%d x %d\n", windowposx, windowposy);
+	else
+		Log::TypedLog(CHN_DLL, "Window position\t\t\t\t\tCentered\n");
+
+	Log::TypedLog(CHN_DLL, "Mod loader\t\t\t\t\t%s\n", usemod ? "Enabled" : "Disabled");
+	Log::TypedLog(CHN_DLL, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Finished initializing INI settings\n");
+
+	/*Language setting*/
 	patchNop((void*)ADDR_FUNC_LangFromReg, 5);		//Don't get the value from registry
 
 	if (language == 1)
@@ -120,80 +208,56 @@ void initPatch() {
 
 	patchByte((void*)(ADDR_LanguageFlag + 0x8), 0x07);	//Load and save savegames across different language settings
 	patchByte((void*)(ADDR_LanguageFlag + 0xC), 0x01);
-	Log::TypedLog(CHN_DLL, "Loading language setting: %s\n", (language == 1) ? "English" : ((language == 2) ? "French" : ((language == 3) ? "German" : "English")));
 
-	/* Set button font */
-	patch_button_font(buttonfont);
-	if (buttonfont > 1)
-		Log::TypedLog(CHN_DLL, "Loading button font: %s\n", (buttonfont == 2) ? "Ps2" : ((buttonfont == 3) ? "Xbox" : ((buttonfont == 4) ? "NGC" : "PC")));
-	else
-		Log::TypedLog(CHN_DLL, "Loading button font: PC\n");
-
-	/* Set intro movies */
+	/*Intro movies*/
 	if (!intromovies)
 		patchBytesM((void*)ADDR_IntroMovies, (BYTE*)"\x83\xf8\x01\x90\x90\x75\x01\xc3\xe9\x83\x05\x00\x00", 13);
-	Log::TypedLog(CHN_DLL, "Intro movies: %s\n", intromovies ? "Enabled" : "Disabled");
 
-	/* Set THUG airdrift */
+	/*Button font*/
+	patch_button_font(buttonfont);
+	
+	/*TODO Patch button lookup for Ps2 menu prompts (triangle = back). This goes along with redirecting CFunc::SetButtonEventMappings*/
+	//if (menubuttons == 2) {
+	//	patchByte((void*)0xDEADBEEF, 0x03);
+	//	patchByte((void*)0xDEADBEEF, 0x01);
+	//}
+
+	/*THUG airdrift */
 	if (airdrift) {
 		patchNop((void*)0x00526A36, 8); //Lock camera fix
 		patchNop((void*)ADDR_AirDrift, 8);
-		/* Walkspin is disabled in script.cpp */
-	}
-	Log::TypedLog(CHN_DLL, "AirDrift: %s\n", airdrift ? "Enabled" : "Disabled");
-	Log::TypedLog(CHN_DLL, "WalkSpin: %s\n", walkspin ? "Enabled (THUG2)" : "Disabled (THUG)");
-
-	/* Ps2Controls */
-	Log::TypedLog(CHN_DLL, "Ps2Controls: %s\n", Ps2Controls ? "Enabled" : "Disabled");
-
-	/* Drop Down Control */
-	switch (dropdowncontrol) {
-		case 1: Log::TypedLog(CHN_DLL, "DropDownControl: L2+R2 (PC default)\n"); break;
-		case 2: Log::TypedLog(CHN_DLL, "DropDownControl: L1\n"); break;
-		case 3: Log::TypedLog(CHN_DLL, "DropDownControl: R1\n"); break;
-		case 4: Log::TypedLog(CHN_DLL, "DropDownControl: L2\n"); break;
-		case 5: Log::TypedLog(CHN_DLL, "DropDownControl: R2\n"); break;
+		// Walkspin is disabled in script.cpp
 	}
 
-	/*Quick get up from bails*/
-	Log::TypedLog(CHN_DLL, "Quick bail get up: %s\n", quickgetup ? "Enabled" : "Disabled");
-
-	/* Set spindelay. Off is Ps2 default, on is PC default (value = 100) */
+	/*Set spindelay. Off is Ps2 default, on is PC default (value = 100)*/
 	if (!spindelay) {
 		patchNop((void*)ADDR_SpinLagL, 2);
 		patchNop((void*)ADDR_SpinLagR, 2);
-	}
-	Log::TypedLog(CHN_DLL, "SpinDelay: %s\n", spindelay ? "Enabled (PC default)" : "Disabled (Ps2 default)");
-	Log::TypedLog(CHN_DLL, "BoardScuffs: %s\n", boardscuffs ? "Enabled" : "Disabled");
-	Log::TypedLog(CHN_DLL, "NoAdditionalScriptMods: %s\n", noadditionalscriptmods ? "Enabled" : "Disabled");
-		
+	}		
 
-	/* Graphic settings */
+	/*Graphic settings*/
 	if (graphics_settings.bettergraphics) {
-		/* Slight graphical improvements */
-        if(graphics_settings.blurfix) {
-            patchNop((void*)0x0044F045, 8);
-            patchNop((void*)0x0048C330, 5); // This breaks flash effects 
-            patchNop((void*)0x004B2DC4, 5);
-            patchNop((void*)0x004B3405, 5);
-        }
-		/* very high shadow quality */
-		patchByte((void*)(0x004A19E5 + 2), 0x04); 
+		/*Slight graphical improvements*/
+		if (graphics_settings.blurfix) {
+			patchNop((void*)0x0044F045, 8);
+			patchNop((void*)0x0048C330, 5); // This breaks flash effects 
+			patchNop((void*)0x004B2DC4, 5);
+			patchNop((void*)0x004B3405, 5);
+		}
+		/*very high shadow quality*/
+		patchByte((void*)(0x004A19E5 + 2), 0x04);
 		patchByte((void*)(0x004A19EA + 2), 0x04);
 	}
 
-	Log::TypedLog(CHN_DLL, "Better graphics for shadows and edges: %s\n", graphics_settings.bettergraphics ? "Enabled" : "Disabled");
-	Log::TypedLog(CHN_DLL, "Graphic settings - Fullscreen Anti-Aliasing: %s\n", graphics_settings.antialiasing ? "Enabled" : "Disabled");
-	Log::TypedLog(CHN_DLL, "Graphic settings - HQ Shadows: %s\n", graphics_settings.hqshadows ? "Enabled" : "Disabled");
-	Log::TypedLog(CHN_DLL, "Graphic settings - Distance Clipping: %s\n", graphics_settings.distanceclipping ? "Enabled" : "Disabled");
-	if (graphics_settings.distanceclipping) {
-		Log::TypedLog(CHN_DLL, "Graphic settings - Clipping Distance: %d\n", graphics_settings.clippingdistance);
-		Log::TypedLog(CHN_DLL, "Graphic settings - Fog: %s\n", graphics_settings.fog ? "Enabled" : "Disabled");
-	}
-	Log::TypedLog(CHN_DLL, "Graphic settings - Resolution from INI: %d x %d\n", resX, resY);
-	Log::TypedLog(CHN_DLL, "Graphic settings - Window mode: %s \n", (isWindowed && !isBorderless) ? "Enabled (default)" : ((isWindowed && isBorderless) ? "Enabled (borderless)" : "Disabled"));
-
-	Log::TypedLog(CHN_DLL, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Finished initializing INI settings\n");
+	/*TODO Connection fix*/
+	//patchCall((void*)0x004E056A, (void*)&runProfileConnectScript);
+	//patchByte((void*)0x004CF330, 0xEB);
+	//patchByte((void*)(0x004C2DD9 + 1), 0x00);
+	//patchByte((void*)0x005C86FC, 0x6F);
+	//patchByte((void*)0x005C8703, 0x70);
+	//patchByte((void*)0x005C870A, 0x65);
+	//patchByte((void*)0x005C8711, 0x6E);
+	//patchBytesM((void*)0x007D1520, (BYTE*)"\x6F\x70\x65\x6E\x73\x70\x79\x00", 8);
 }
 
 void patchStaticValues() {
@@ -222,9 +286,6 @@ void patchStaticValues() {
 	patchByte((void*)(0x005F8AE4 + 6), 0x65);
 	patchByte((void*)(0x005F8AEB + 6), 0x6E);
 	patchDWord((void*)(0x005FBAF4 + 1), 0x00001388);
-
-	/* Stability fix */
-	patchBytesM((void*)0x004DB357, (BYTE*)"\xC7\x05\xAC\x6C\x78\x00\x00\x00\x7A\x47", 10);
 
 	/* Increase script memory region */
 	patchByte((void*)(0x005BBCBE + 4), 0x10);
@@ -263,8 +324,21 @@ void patchStaticValues() {
 	patchCall((void*)0x004523B4, &Rnd_fixed);
 	patchCall((void*)0x004523F6, &Rnd_fixed);
 
-	// Allows shake for walk camera! This will not work otherwise.
+	/* Make movies check for input more often than every five frames, thanks PARTYMANX */
+	patchNop((void*)0x00450121, 6);
+
+	/* Allows shake for walk camera! This will not work otherwise */
 	patchDWord((void*)0x0064C5E4, (int32_t)&WalkCamComponent_Update_Hook);
+
+	/* Expand default clipping distance to avoid issues in large level backgrounds (I.E. skatopia), thanks PARTYMANX */
+	patchFloat((void*)(0x004DB357 + 6), 96000.0f);
+
+	/* Patch fast exit*/
+	patchCall((void*)0x004E2492, fastExit);
+}
+
+void fastExit() {
+	exit(0);
 }
 
 void __fastcall reorderFlashVertices(void* unused, uint32_t* d3dDevice, void* alsodevice, uint32_t prim, uint32_t count, struct flashVertex* vertices, uint32_t stride) {
@@ -300,8 +374,13 @@ void patchWindow() {
 }
 
 void enforceMaxResolution() {
-	defWidth = GetSystemMetrics(SM_CXSCREEN);	/* The width of the screen of the primary display monitor, in pixels.  */
-	defHeight = GetSystemMetrics(SM_CYSCREEN);	/* The height of the screen of the primary display monitor, in pixels.  */
+
+	DEVMODE devMode;
+	devMode.dmSize = sizeof(DEVMODE);
+	if (EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &devMode)) {
+		defWidth = devMode.dmPelsWidth;
+		defHeight = devMode.dmPelsHeight;
+	}
 
 	uint8_t isValidX = 0;
 	uint8_t isValidY = 0;
@@ -329,12 +408,47 @@ void enforceMaxResolution() {
 	}
 }
 
+void handleWindowEvent(SDL_Event* e) {
+
+	switch (e->type) {
+	case SDL_WINDOWEVENT:
+		if (e->window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
+			*(uint8_t*)0x0072DE00 = 0; // recreate_device
+
+			//TODO Stop music playback
+			//patchByte((void*)0x00422B78, 0x74);
+			//patchByte((void*)0x00422B90, 0x74);
+			//patchByte((void*)0x00425807, 0x75);
+		}
+		else if (e->window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
+			*(uint8_t*)0x0072DE00 = 1;
+			*(uint32_t*)0x007CCBE4 = 1;
+
+			//Resume music playback
+			//patchByte((void*)0x00422B78, 0x75);
+			//patchByte((void*)0x00422B90, 0x75);
+			//patchByte((void*)0x00425807, 0x74);
+		}
+		return;
+	default:
+		return;
+	}
+}
+
 void createSDLWindow() {
+
+	//TODO registerEventHandler(handleWindowEvent);
+
 	SDL_Init(SDL_INIT_VIDEO);
+
 	uint32_t flags = isWindowed ? (SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE) : SDL_WINDOW_FULLSCREEN;
 
 	if (isWindowed && isBorderless) {
 		flags |= SDL_WINDOW_BORDERLESS;
+	}
+
+	if (isWindowed) {
+		patchByte((void*)(0x004D871F + 1), 0x05);	// set fullscreen to 0
 	}
 
 	/* Fullscreen mode: Sets resX and resY to 0 if the resolution from INI is not supported on the device. */
@@ -357,6 +471,14 @@ void createSDLWindow() {
 
 	Log::TypedLog(CHN_DLL, "Aspect ratio: %f\n", getaspectratio());
 
+	bool windows_created = false;
+	if (!isWindowed) isBorderless = 0;
+
+	//TODO
+	//if (usemod)
+	//	sprintf_s(window_title, "%s%s%s%s", window_title, " (", getWindowTitle(), ")");
+
+
 	if (usemod) {
 		getWindowTitle(&windowtitle_maybe);
 		if (strlen(windowtitle_maybe.windowtitle))
@@ -374,11 +496,10 @@ void createSDLWindow() {
 	SDL_VERSION(&wmInfo.version);
 	SDL_GetWindowWMInfo(window, &wmInfo);
 	*hwnd = wmInfo.info.win.window;
-	*(int*)ADDR_IsFocused = 1;
 
-	//DirectX9: D3DPRESENTPARAMS
+	*(uint32_t*)0x007CCBE4 = 1;
+
 	if (isWindowed) {
-		patchBytesM((void*)0x004D871F, (BYTE*)"\xA3\x9C\x6A\x78\x00\x90", 6); /* Windowed = 1 */
 		SDL_ShowCursor(1);
 	}
 	else {
@@ -574,11 +695,11 @@ uint32_t patchButtonLookup(char* p_button) {
 
 uint32_t patchMetaButtonMap() {
 	if (buttonfont == 2)
-		return unkButtonMap_Native(0x6030A16D); /* meta_button_map_ps2 */
+		return GlobalGetArrayAsInt_Native(0x6030A16D); /* meta_button_map_ps2 */
 	else if (buttonfont == 3)
-		return unkButtonMap_Native(0xBAF816FB); /* meta_button_map_xbox */
+		return GlobalGetArrayAsInt_Native(0xBAF816FB); /* meta_button_map_xbox */
 	else if (buttonfont == 4)
-		return unkButtonMap_Native(0xEE6CDAC5); /* meta_button_map_gamecube */
+		return GlobalGetArrayAsInt_Native(0xEE6CDAC5); /* meta_button_map_gamecube */
 }
 
 void patch_button_font(uint8_t sel) {
@@ -682,6 +803,11 @@ void __declspec(naked) WalkCamComponent_Update_Hook()
 		pop ebx
 		ret
 	}
+}
+
+void loadLogSettings(struct logsettings* settingsOut) {
+	settingsOut->writefile = writefile;
+	settingsOut->appendlog = appendlog;
 }
 
 /* Keyboard binds */

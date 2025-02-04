@@ -1,0 +1,3 @@
+#include "Resources.h"
+
+IDI_THUG2ICO ICON "thug2.ico"
