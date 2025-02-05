@@ -5,7 +5,7 @@
 struct modsettings windowtitle_maybe;
 char* executableDirectory[MAX_PATH];
 char configFile[MAX_PATH];
-char window_title[MAX_PATH] = "THUG2 PARTYMOD";
+char window_title[MAX_PATH] = "THUG2 SDL";
 
 float* screenAspectRatio = (float*)0x00701340;
 uint8_t* antialiasing = (uint8_t*)(0x007D6434);
@@ -21,6 +21,10 @@ uint32_t WCC_Update_Native_Var = 0x005251D0;
 uint32_t Cam_GetComponent_Native_Var = 0x0045DB90;
 uint32_t AddShake_Native_Var = 0x004F9F00;
 uint32_t WallRideAnywhere_RetAddr = 0x00500468;
+
+uint8_t* isFocused = (uint8_t*)0x007CCBE4;
+uint32_t* resolution_setting = (uint32_t*)0x007D643C;
+uint8_t* addr_recreatedevice = (uint8_t*)0x00786AB4;
 
 bool isWindowed;
 bool isBorderless;
@@ -332,14 +336,8 @@ void patchStaticValues() {
 
 	/* Expand default clipping distance to avoid issues in large level backgrounds (I.E. skatopia), thanks PARTYMANX */
 	patchFloat((void*)(0x004DB357 + 6), 96000.0f);
-
-	/* Patch fast exit*/
-	patchCall((void*)0x004E2492, fastExit);
 }
 
-void fastExit() {
-	exit(0);
-}
 
 void __fastcall reorderFlashVertices(void* unused, uint32_t* d3dDevice, void* alsodevice, uint32_t prim, uint32_t count, struct flashVertex* vertices, uint32_t stride) {
 
@@ -409,25 +407,17 @@ void enforceMaxResolution() {
 }
 
 void handleWindowEvent(SDL_Event* e) {
+	uint8_t* recreateDevice = (uint8_t*)addr_recreatedevice;
 
 	switch (e->type) {
 	case SDL_WINDOWEVENT:
 		if (e->window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
-			*(uint8_t*)0x0072DE00 = 0; // recreate_device
-
-			//TODO Stop music playback
-			//patchByte((void*)0x00422B78, 0x74);
-			//patchByte((void*)0x00422B90, 0x74);
-			//patchByte((void*)0x00425807, 0x75);
+			*recreateDevice = 0;
+			//*isFocused = 0;
 		}
 		else if (e->window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
-			*(uint8_t*)0x0072DE00 = 1;
-			*(uint32_t*)0x007CCBE4 = 1;
-
-			//Resume music playback
-			//patchByte((void*)0x00422B78, 0x75);
-			//patchByte((void*)0x00422B90, 0x75);
-			//patchByte((void*)0x00425807, 0x74);
+			*recreateDevice = 1;
+			*isFocused = 1;
 		}
 		return;
 	default:
@@ -437,7 +427,7 @@ void handleWindowEvent(SDL_Event* e) {
 
 void createSDLWindow() {
 
-	//TODO registerEventHandler(handleWindowEvent);
+	registerEventHandler(handleWindowEvent);
 
 	SDL_Init(SDL_INIT_VIDEO);
 

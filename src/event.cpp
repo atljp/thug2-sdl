@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
+
 #include <event.h>
-#include <Util/sb.h>
+#include <util/sb.h>
 
 struct stretchyBuffer* eventHandlers;
 

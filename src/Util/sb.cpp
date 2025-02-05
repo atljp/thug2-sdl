@@ -1,7 +1,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <Util/sb.h>
+
+#include <util/sb.h>
 
 struct stretchyBuffer* sb_alloc(size_t unit, size_t initial_capacity) {
 	struct stretchyBuffer* result = (stretchyBuffer * )malloc(sizeof(struct stretchyBuffer));
@@ -10,6 +11,7 @@ struct stretchyBuffer* sb_alloc(size_t unit, size_t initial_capacity) {
 	result->capacity = initial_capacity;
 	result->count = 0;
 	result->data = malloc(unit * initial_capacity);
+
 	return result;
 }
 
