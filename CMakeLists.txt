@@ -21,7 +21,7 @@ set(SOURCE_FILES
 	"${SRC}/QB/LazyArray.cpp"
 	"${SRC}/QB/LazyStruct.cpp"
 	"${SRC}/QB/QB.cpp"
-	"${SRC}/QB/script.cpp"
+	"${SRC}/script.cpp"
 	"${SRC}/event.cpp"
 	"${SRC}/Util/sb.cpp"
 )
@@ -43,7 +43,7 @@ set(HEADER_FILES
 	"${SRC}/QB/LazyStruct.h"
 	"${SRC}/QB/malloc.h"
 	"${SRC}/QB/QB.h"
-	"${SRC}/QB/script.h"
+	"${SRC}/script.h"
 	"${SRC}/QB/scriptcontent.h"
 	"${SRC}/Resources/resources.h"	
 	"${SRC}/event.h"

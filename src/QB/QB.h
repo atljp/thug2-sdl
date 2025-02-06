@@ -7,5 +7,5 @@
 #include <cstdint>
 #include <QB/LazyStruct.h>
 
-bool RunScript(uint32_t name, Script::LazyStruct* params, void* object);
+bool RunScript(uint32_t name, Script::LazyStruct* params, void* object, void* object2);
 void RunScriptWithReturn(uint32_t name, Script::LazyStruct* params, void* object, Script::LazyStruct* params_out);

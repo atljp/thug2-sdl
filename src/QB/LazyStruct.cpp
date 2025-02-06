@@ -1,15 +1,13 @@
 #include "LazyStruct.h"
 #include "malloc.h"
-
-
-
+#include "script.h"
 
 namespace Script {
 
 	// --------------------------------------------
 
 	typedef void(__thiscall* StructInitializeCall)(LazyStruct* struc);
-	StructInitializeCall StructInitialize = (StructInitializeCall)(0x00476410); //Thug2 address
+	StructInitializeCall StructInitialize = (StructInitializeCall)(0x00476410);
 
 	void LazyStruct::Initialize()
 	{
@@ -27,8 +25,6 @@ namespace Script {
 	}
 
 	// --------------------------------------------
-
-	
 
 	typedef void (__thiscall* Free_NativeCall)(LazyStruct* struc);
 	Free_NativeCall Free_Native = (Free_NativeCall)(0x00477090); //Thug2 address - old: 0x00477130
@@ -48,7 +44,7 @@ namespace Script {
 
 		if (!result)
 		{
-			//Logger::Error("LazyStruct::s_create() failed. Memory error?");
+			Log::Error("LazyStruct::s_create() failed. Memory error?");
 			return nullptr;
 		}
 
@@ -148,7 +144,7 @@ namespace Script {
 	}
 
 	typedef bool (__thiscall* Contains_NativeCall)(LazyStruct* struc, uint32_t item_name);
-	Contains_NativeCall Contains_Native = (Contains_NativeCall)(0x00476AF0); //Thug2 address
+	Contains_NativeCall Contains_Native = (Contains_NativeCall)(0x00476AF0);
 
 	// See if we contain a valueless checksum
 	bool LazyStruct::Contains(uint32_t qbKey)
@@ -157,21 +153,21 @@ namespace Script {
 	}
 
 	typedef bool (__thiscall* ContainsFlag_NativeCall)(LazyStruct* struc, uint32_t flag);
-	ContainsFlag_NativeCall ContainsFlag_Native = (ContainsFlag_NativeCall)(0x00476B40); //Thug2 address
+	ContainsFlag_NativeCall ContainsFlag_Native = (ContainsFlag_NativeCall)(0x00476B40);
 
 	// Contains a flag?
 	bool LazyStruct::ContainsFlag(uint32_t qbKey) { return ContainsFlag_Native(this, qbKey); }
 
 	typedef void __fastcall AddStringCall(LazyStruct* struc, int edx, uint32_t qbKey, char* value);
-	AddStringCall* AddString = (AddStringCall*)(0x004779D0); //Thug2 address
+	AddStringCall* AddString_Native = (AddStringCall*)(0x004779D0);
 
-	void LazyStruct::SetStringItem(uint32_t qbKey, char* value)
+	void LazyStruct::AddString(uint32_t qbKey, char* value)
 	{
-		AddString(this, 0, qbKey, value);
+		AddString_Native(this, 0, qbKey, value);
 	}
 
 	typedef void (__thiscall* AddStructure_NativeCall)(LazyStruct* struc, uint32_t qbKey, LazyStruct* value);
-	AddStructure_NativeCall AddStructure_Native = (AddStructure_NativeCall)(0x00478670); //Thug2 address
+	AddStructure_NativeCall AddStructure_Native = (AddStructure_NativeCall)(0x00478670);
 
 	void LazyStruct::AddStructure(uint32_t qbKey, LazyStruct* value)
 	{
@@ -187,10 +183,22 @@ namespace Script {
 	}
 
 	//---------------------------------------
+	// Add structure pointer TODO
+	//---------------------------------------
+
+	typedef void(__thiscall* AddStructurePointer_NativeCall)(LazyStruct* struc, uint32_t nameChecksum, LazyStruct* p_structure);
+	AddStructurePointer_NativeCall AddStructurePointer_Native = (AddStructurePointer_NativeCall)(0x004781B0);
+
+	void LazyStruct::AddStructurePointer(uint32_t nameChecksum, LazyStruct* p_structure)
+	{
+		AddStructurePointer_Native(this, nameChecksum, p_structure);
+	}
+
+	//---------------------------------------
 	// Get integer item
 	//---------------------------------------
 
-	int LazyStruct::GetInteger(uint32_t qbKey) // 0x004790C0 or 0x00476630
+	int LazyStruct::GetInteger(uint32_t qbKey)
 	{
 		LazyStructItem* item = GetItem(qbKey);
 		if (!item)
@@ -225,11 +233,23 @@ namespace Script {
 	}
 
 	//---------------------------------------
+	// Get text
+	//---------------------------------------
+
+	typedef bool(__thiscall* GetText_NativeCall)(LazyStruct* struc, uint32_t checksum, const char** pp_text, bool assert);
+	GetText_NativeCall GetText_Native = (GetText_NativeCall)(0x00476590);
+
+	bool LazyStruct::GetText(uint32_t checksum, const char** pp_text, bool assert)
+	{
+		return GetText_Native(this, checksum, pp_text, assert);
+	}
+
+	//---------------------------------------
 	// Add integer
 	//---------------------------------------
 
 	typedef void (__thiscall* AddInteger_NativeCall)(LazyStruct* struc, uint32_t checksum, int value);
-	AddInteger_NativeCall AddInteger_Native = (AddInteger_NativeCall)(0x00477B80); //Thug2 address
+	AddInteger_NativeCall AddInteger_Native = (AddInteger_NativeCall)(0x00477B80);
 
 	void LazyStruct::AddInteger(uint32_t checksum, int value)
 	{
@@ -241,7 +261,7 @@ namespace Script {
 	//---------------------------------------
 
 	typedef void (__thiscall* AddFloat_NativeCall)(LazyStruct* struc, uint32_t nameChecksum, float float_val);
-	AddFloat_NativeCall AddFloat_Native = (AddFloat_NativeCall)(0x00477C60); //Thug2 address
+	AddFloat_NativeCall AddFloat_Native = (AddFloat_NativeCall)(0x00477C60);
 
 	void LazyStruct::AddFloat(uint32_t nameChecksum, float float_val)
 	{
@@ -253,7 +273,7 @@ namespace Script {
 	//---------------------------------------
 	
 	typedef void (__thiscall* AddPair_NativeCall)(LazyStruct* struc, uint32_t nameChecksum, float x, float y);
-	AddPair_NativeCall AddPair_Native = (AddPair_NativeCall)(0x00477FC0); //Thug2 address
+	AddPair_NativeCall AddPair_Native = (AddPair_NativeCall)(0x00477FC0);
 
 	void LazyStruct::AddPair(uint32_t nameChecksum, float x, float y)
 	{
@@ -265,7 +285,7 @@ namespace Script {
 	//---------------------------------------
 
 	typedef void (__thiscall* AddChecksum_NativeCall)(LazyStruct* struc, uint32_t nameChecksum, uint32_t checksum);
-	AddChecksum_NativeCall AddChecksum_Native = (AddChecksum_NativeCall)(0x00477D40); //Thug2 address
+	AddChecksum_NativeCall AddChecksum_Native = (AddChecksum_NativeCall)(0x00477D40);
 
 	void LazyStruct::AddChecksum(uint32_t nameChecksum, uint32_t checksum)
 	{
@@ -277,7 +297,7 @@ namespace Script {
 	//---------------------------------------
 
 	typedef void (__thiscall* AppendStructure_NativeCall)(LazyStruct* struc, const LazyStruct *p_struct);
-	AppendStructure_NativeCall AppendStructure_Native = (AppendStructure_NativeCall)(0x00478540); //Thug2 address
+	AppendStructure_NativeCall AppendStructure_Native = (AppendStructure_NativeCall)(0x00478540);
 
 	void LazyStruct::AppendStructure(const LazyStruct *p_struct)
 	{
@@ -289,7 +309,7 @@ namespace Script {
 	//---------------------------------------
 
 	typedef void (__thiscall* AddArrayPointer_NativeCall)(LazyStruct* struc, uint32_t nameChecksum, void *p_array);
-	AddArrayPointer_NativeCall AddArrayPointer_Native = (AddArrayPointer_NativeCall)(0x004780D0); //Thug2 address
+	AddArrayPointer_NativeCall AddArrayPointer_Native = (AddArrayPointer_NativeCall)(0x004780D0);
 
 	void LazyStruct::AddArrayPointer(uint32_t nameChecksum, void *p_array)
 	{
@@ -301,24 +321,22 @@ namespace Script {
 	//---------------------------------------
 
 	typedef void (__thiscall* AddArray_NativeCall)(LazyStruct* struc, uint32_t nameChecksum, const Script::LazyArray* p_array);
-	AddArray_NativeCall AddArray_Native = (AddArray_NativeCall)(0x00478B00); //Thug2 address
+	AddArray_NativeCall AddArray_Native = (AddArray_NativeCall)(0x00478B00);
 
 	void LazyStruct::AddArray(uint32_t nameChecksum, const Script::LazyArray* p_array)
 	{
 		AddArray_Native(this, nameChecksum, p_array);
 	}
 
-
 	//---------------------------------------
-	// Get array item
+	// Get array
 	//---------------------------------------
 
-	typedef Script::LazyArray* (__thiscall* GetArray_NativeCall)(LazyStruct* struc, uint32_t nameChecksum, uint32_t checksum, const Script::LazyStruct* p_array);
-	GetArray_NativeCall GetArray_Native = (GetArray_NativeCall)(0x00479070);
+	bool(__thiscall* GetArray_Native)(LazyStruct* struc, uint32_t qbKey, LazyArray** out_val, int assert) = reinterpret_cast <bool(__thiscall*)(LazyStruct * struc, uint32_t qbKey, LazyArray * *out_val, int assert)>(0x00479070);
 
-	Script::LazyArray* LazyStruct::GetArray(uint32_t nameChecksum, uint32_t checksum, const Script::LazyStruct* p_array)
+	bool LazyStruct::GetArray(uint32_t nameChecksum, Script::LazyArray** pp_array)
 	{
-		return GetArray_Native(this, nameChecksum, checksum, p_array);
+		return GetArray_Native(this, nameChecksum, pp_array, 0);
 	}
 
 	//---------------------------------------
@@ -329,7 +347,7 @@ namespace Script {
 	{
 		LazyStructItem* item = GetItem(qbKey);
 
-		if (item && ((item->itemType >> 1) == QBTYPE_STRING))
+		if (item && ((item->itemType >> 1) == ESYMBOLTYPE_STRING))
 			return (char*)item->value;
 
 		return nullptr;
@@ -347,5 +365,7 @@ namespace Script {
 
 		return (LazyStruct*)item->value;
 	}
-
 }
+
+
+	

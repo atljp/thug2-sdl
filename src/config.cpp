@@ -265,12 +265,12 @@ void initPatch() {
 }
 
 void patchStaticValues() {
-	/* Increase startup speed */
+	/*
+	* //TODO
 	patchByte((void*)0x0045002C, 0x74);
 	patchByte((void*)0x0052F70F, 0xEB);
 	patchByte((void*)(0x0052F7DF + 1), 0x00);
 	patchByte((void*)0x0053654F, 0xEB);
-	patchDWord((void*)(0x00564E64 + 1), 0x000001FF);
 	patchByte((void*)0x005F3391, 0x13);
 	patchByte((void*)(0x005F5EC5 + 1), 0xC7);
 	patchNop((void*)(0x005F5EC5 + 2), 4);
@@ -284,12 +284,16 @@ void patchStaticValues() {
 	patchByte((void*)(0x005F5F91 + 1), 0xC7);
 	patchNop((void*)(0x005F5F91 + 2), 4);
 	patchNop((void*)0x005F5FA5, 6);
-	patchDWord((void*)(0x005F88F7 + 2), 0x000001F4);
-	patchByte((void*)(0x005F8AD6 + 6), 0x6F);
-	patchByte((void*)(0x005F8ADD + 6), 0x70);
-	patchByte((void*)(0x005F8AE4 + 6), 0x65);
-	patchByte((void*)(0x005F8AEB + 6), 0x6E);
+	patchByte((void*)(0x005F8AD6 + 6), 0x6F); //reached
+	patchByte((void*)(0x005F8ADD + 6), 0x70); //reached
+	patchByte((void*)(0x005F8AE4 + 6), 0x65); //reached
+	patchByte((void*)(0x005F8AEB + 6), 0x6E); //reached
 	patchDWord((void*)(0x005FBAF4 + 1), 0x00001388);
+	*/
+
+	/* Increase startup speed */
+	patchDWord((void*)(0x005F88F7 + 2), 0x000001F4); //reached
+	patchDWord((void*)(0x00564E64 + 1), 0x000001FF); //reached
 
 	/* Increase script memory region */
 	patchByte((void*)(0x005BBCBE + 4), 0x10);
@@ -425,6 +429,10 @@ void handleWindowEvent(SDL_Event* e) {
 	}
 }
 
+SDL_HitTestResult HitTestCallback(SDL_Window* Window, const SDL_Point* Area, void* Data) {
+	return SDL_HITTEST_DRAGGABLE;
+}
+
 void createSDLWindow() {
 
 	registerEventHandler(handleWindowEvent);
@@ -441,9 +449,9 @@ void createSDLWindow() {
 		patchByte((void*)(0x004D871F + 1), 0x05);	// set fullscreen to 0
 	}
 
-	/* Fullscreen mode: Sets resX and resY to 0 if the resolution from INI is not supported on the device. */
-	/* Window mode : Sets resX and resY to 0 if the resoltion from INI is bigger than the max supported one */
 	enforceMaxResolution();
+
+	*resolution_setting = 0;
 
 	if (resX == 0 || resY == 0) {
 		resX = defWidth;
@@ -464,23 +472,30 @@ void createSDLWindow() {
 	bool windows_created = false;
 	if (!isWindowed) isBorderless = 0;
 
-	//TODO
-	//if (usemod)
-	//	sprintf_s(window_title, "%s%s%s%s", window_title, " (", getWindowTitle(), ")");
+	if (usemod)
+		sprintf_s(window_title, "%s%s%s%s", window_title, " (", getWindowTitle(), ")");
 
-
-	if (usemod) {
-		getWindowTitle(&windowtitle_maybe);
-		if (strlen(windowtitle_maybe.windowtitle))
-			sprintf_s(window_title, "%s%s%s%s", window_title, " (", windowtitle_maybe.windowtitle, ")");
+	if (isWindowed || isBorderless) {
+		BOOL dpi_result = SetProcessDPIAware();
+		if (savewindowposition) {
+			window = SDL_CreateWindow(window_title, windowposx ? windowposx : SDL_WINDOWPOS_CENTERED, windowposy ? windowposy : SDL_WINDOWPOS_CENTERED, resX, resY, flags);
+			windows_created = true;
+		}
+		SDL_SetWindowResizable(window, SDL_TRUE);
 	}
-	window = SDL_CreateWindow(window_title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, resX, resY, flags);   // TODO: move / resize borderless window
-	SDL_SetWindowResizable(window, SDL_TRUE);
 
-	if (!window)
+	if (!windows_created)
+		window = SDL_CreateWindow(window_title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, resX, resY, flags);
+
+	// make borderless window draggable
+	if (isBorderless) {
+		SDL_Renderer* Renderer = SDL_CreateRenderer(window, -1, 0);
+		SDL_SetWindowHitTest(window, HitTestCallback, 0);
+	}
+
+	if (!window) {
 		Log::TypedLog(CHN_SDL, "Failed to create window! Error: %s\n", SDL_GetError());
-	else
-		Log::TypedLog(CHN_SDL, "Window successfully created!\n");
+	}
 
 	SDL_SysWMinfo wmInfo;
 	SDL_VERSION(&wmInfo.version);
@@ -546,19 +561,34 @@ float getaspectratio() {
 }
 
 /* called from patchScripts */
-void loadScriptSettings(struct scriptsettings* scriptsettingsOut) {
-	if (scriptsettingsOut) {
-		scriptsettingsOut->airdrift = airdrift;
-		scriptsettingsOut->walkspin = walkspin;
-		scriptsettingsOut->boardscuffs = boardscuffs;
-		scriptsettingsOut->dropdowncontrol = dropdowncontrol;
-		scriptsettingsOut->quickgetup = quickgetup;
-		scriptsettingsOut->noadditionalscriptmods = noadditionalscriptmods;
+void loadSettings(struct modsettings* settingsOut) {
+	if (settingsOut) {
+		settingsOut->isPs2Controls = Ps2Controls;
+		settingsOut->invertRXplayer1 = invertRXplayer1;
+		settingsOut->invertRYplayer1 = invertRYplayer1;
+		settingsOut->disableRXplayer1 = disableRXplayer1;
+		settingsOut->disableRYplayer1 = disableRYplayer1;
+		settingsOut->airdrift = airdrift;
+		settingsOut->walkspin = walkspin;
+		settingsOut->buttonfont = buttonfont;
+		//settingsOut->chatsize = chatsize;
+		settingsOut->boardscuffs = boardscuffs;
+		settingsOut->dropdowncontrol = dropdowncontrol;
+		settingsOut->quickgetup = quickgetup;
+		settingsOut->dropdowncontrol = dropdowncontrol;
+		settingsOut->cavemancontrol = cavemancontrol;
+		settingsOut->laddergrabcontrol = laddergrabcontrol;
+		settingsOut->noadditionalscriptmods = noadditionalscriptmods;
+		settingsOut->savewindowposition = savewindowposition;
+		settingsOut->windowposx = windowposx;
+		settingsOut->windowposy = windowposy;
+		settingsOut->menubuttons = menubuttons;
+		settingsOut->consolewaittime = consolewaittime;
 	}
 }
 
 /* called from initMod */
-void loadModSettings(struct modsettings* modsettingsOut) {
+void loadModSettings(struct extmodsettings* modsettingsOut) {
 	modsettingsOut->usemod = usemod;
 	modsettingsOut->configfile = configFile;
 	modsettingsOut->workingdir = (char*)executableDirectory;

@@ -13,7 +13,7 @@
 #include "modloader.h"
 #include "QB/LazyStruct.h"
 #include "QB/Qb.h"
-#include "QB/script.h"
+#include "script.h"
 #include "QB/CFuncs.h"
 #include <Resources/resources.h>
 #include <event.h>
@@ -157,11 +157,35 @@ struct scriptsettings {
 	bool noadditionalscriptmods;
 };
 
-struct modsettings {
+struct extmodsettings {
 	bool usemod;
 	char* configfile;
 	char* workingdir;
 	char* windowtitle;
+};
+
+
+struct modsettings {
+	uint8_t isPs2Controls;
+	uint8_t invertRXplayer1;
+	uint8_t invertRYplayer1;
+	uint8_t disableRXplayer1;
+	uint8_t disableRYplayer1;
+	uint8_t airdrift;
+	uint8_t walkspin;
+	uint8_t buttonfont;
+	uint8_t chatsize;
+	uint8_t consolewaittime;
+	uint8_t boardscuffs;
+	uint8_t dropdowncontrol;
+	uint8_t cavemancontrol;
+	uint8_t laddergrabcontrol;
+	uint8_t quickgetup;
+	uint8_t noadditionalscriptmods;
+	uint8_t savewindowposition;
+	uint8_t windowposx;
+	uint8_t windowposy;
+	uint8_t menubuttons;
 };
 
 struct logsettings {
@@ -195,8 +219,8 @@ void patchWindow();
 void patch_button_font(uint8_t sel);
 float getScreenAngleFactor();
 float getaspectratio();
-void loadScriptSettings(struct scriptsettings* scriptsettingsOut);
-void loadModSettings(struct modsettings* modsettingsOut);
+void loadSettings(struct modsettings* settingsOut);
+void loadModSettings(struct extmodsettings* modsettingsOut);
 void getConfigFilePath(char mConfigFile[MAX_PATH]);
 void wallrideanywhere_patch();
 void WalkCamComponent_Update_Hook();

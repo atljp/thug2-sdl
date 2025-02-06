@@ -11,12 +11,12 @@
 // Run a script.
 //---------------------------------------
 
-typedef bool __cdecl RunScript_NativeCall(uint32_t name, void* params, void* object, char a4, int a, int b);
+typedef bool __cdecl RunScript_NativeCall(uint32_t name, void* params, void* object, void* object2);
 RunScript_NativeCall* RunScript_Native = (RunScript_NativeCall*)(0x00475790);
 
-bool RunScript(uint32_t name, Script::LazyStruct* params, void* object)
+bool RunScript(uint32_t name, Script::LazyStruct* params, void* object, void* object2)
 {
-	return RunScript_Native(name, params, object, 0, 0, 0);
+	return RunScript_Native(name, params, object, 0);
 }
 
 //---------------------------------------

@@ -2,7 +2,7 @@
 #include <map>
 
 
-struct modsettings mModsettings;
+struct extmodsettings mModsettings;
 struct stat info;
 char modname[MAX_PATH];
 char modfolder[MAX_PATH];
@@ -305,9 +305,8 @@ void __fastcall PreMgrLoadPre_Wrapper(void* arg1, void* unused, uint8_t* p_data,
 	PreMgrLoadPre(arg1, p_data, arg3, arg4, arg5);
 }
 
-void getWindowTitle(struct modsettings* modsettingsOut)
-{
-	modsettingsOut->windowtitle = modname;
+char* getWindowTitle() {
+	return modname;
 }
 
 void initMod()

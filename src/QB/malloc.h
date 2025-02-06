@@ -12,8 +12,8 @@ static void * (__cdecl * const qbMalloc)(size_t size) = reinterpret_cast<void * 
 static void* (__cdecl* const qbArrayMalloc)(size_t size, int unused) = reinterpret_cast<void* (__cdecl*)(size_t size, int unused)>(0x00408F90);
 
 // For freeing structures
-static void (__cdecl * const FreeQBStruct)(void *memNode) = reinterpret_cast<void (__cdecl *)(void *memNode)>(0x00409070); //Thug2 offset
+static void (__cdecl * const FreeQBStruct)(void *memNode) = reinterpret_cast<void (__cdecl *)(void *memNode)>(0x00409070);
     
 // For freeing arrays
-static void (__cdecl * const FreeQBArray)(void *memNode) = reinterpret_cast<void (__cdecl *)(void *memNode)>(0x00408FD0); //Thug2 offset
+static void (__cdecl * const FreeQBArray)(void *memNode) = reinterpret_cast<void (__cdecl *)(void *memNode)>(0x00408FD0);
 
