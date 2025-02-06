@@ -150,12 +150,12 @@ namespace Log {
 	// Format string from pParams (built-in function)
 	//------------------------
 
-	typedef bool StringFromParamCall(char* print_dest, Script::LazyStruct* pParams, void* pScript);
-	StringFromParamCall* s_from_params = (StringFromParamCall*)(0x0044C840); //THUG2
+	typedef bool StringFromParamCall(char* print_dest, Script::LazyStruct* pParams);
+	StringFromParamCall* s_from_params = (StringFromParamCall*)(0x0044C840);
 
-	void StringFromParams(char* print_dest, Script::LazyStruct* pParams,void* pScript)
+	void StringFromParams(char* print_dest, Script::LazyStruct* pParams)
 	{
-		s_from_params(print_dest, pParams, pScript);
+		s_from_params(print_dest, pParams);
 	}
 
 	//------------------------
@@ -165,12 +165,34 @@ namespace Log {
 	bool CFunc_PrintF(Script::LazyStruct* pParams, void* pScript)
 	{
 		char buf[1024];
-		StringFromParams(buf, pParams, pScript);
+		StringFromParams(buf, pParams);
 
 		TypedLog(CHN_LOG, "%s", buf);
 
 		return 1;
 	}
 
+	//------------------------
+	// Function to replace plain ScriptAssert!
+	//
+	// REMEMBER: This should be FATAL and only used
+	// when the game should show an error message.
+	//------------------------
+
+	bool CFunc_ScriptAssert(Script::LazyStruct* pParams)
+	{
+		char buf[2048];
+		StringFromParams(buf, pParams);
+
+		TypedLog(CHN_LOG, "%s", buf);
+
+		if (l_ExitOnAssert)
+		{
+			Error(buf);
+			return true;
+		}
+
+		return 1;
+	}
 
 }

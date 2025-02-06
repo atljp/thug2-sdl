@@ -1,6 +1,5 @@
 #include "config.h"
-#include <d3d9types.h>
-#include <modloader.h>
+
 
 struct modsettings windowtitle_maybe;
 char* executableDirectory[MAX_PATH];
@@ -28,7 +27,6 @@ uint8_t* addr_recreatedevice = (uint8_t*)0x00786AB4;
 
 bool isWindowed;
 bool isBorderless;
-bool console;
 bool intromovies;
 bool spindelay;
 bool airdrift;
@@ -54,6 +52,7 @@ int defHeight;
 int windowposx;
 int windowposy;
 
+uint8_t console;
 uint8_t language;
 uint8_t buttonfont;
 uint8_t dropdowncontrol;
@@ -88,7 +87,7 @@ void initPatch() {
 	/*Refer to new function for grabbing amount of CFuncs*/
 	patchCall((void*)ADDR_CFuncCountRef, (void*)CFuncs::Pointer_FunctionCount());
 
-	console = GetPrivateProfileInt(MISC_SECTION, "Console", 0, configFile);
+	console = GetPrivateProfileInt(LOG_SECTION, "Console", 0, configFile);
 	writefile = getIniBool(LOG_SECTION, "WriteFile", 0, configFile);
 	appendlog = getIniBool(LOG_SECTION, "AppendLog", 0, configFile);
 	exceptionhandler = getIniBool(LOG_SECTION, "ExceptionHandler", 0, configFile);
@@ -134,15 +133,14 @@ void initPatch() {
 		if (console == 2) { patchJump((void*)0x00401C30, &Log::PrintLog); }
 	}
 
-	//TODO
 	/*Register error handler*/
-	//if (exceptionhandler) {
-	//	CFuncs::RedirectFunction("ScriptAssert", (void*)Log::CFunc_ScriptAssert);
-	//	ErrorManager::Initialize();
-	//	ErrorManager::IgnoreVectoredExceptions(true);
-	//}
+	if (exceptionhandler) {
+		CFuncs::RedirectFunction("ScriptAssert", (void*)Log::CFunc_ScriptAssert);
+		ErrorManager::Initialize();
+		//ErrorManager::IgnoreVectoredExceptions(true);
+	}
 
-	Log::TypedLog(CHN_DLL, "THUG SDL %d.%d\n", VERSION_NUMBER_MAJOR, VERSION_NUMBER_MINOR);
+	Log::TypedLog(CHN_DLL, "THUG2 SDL %d.%d\n", VERSION_NUMBER_MAJOR, VERSION_NUMBER_MINOR);
 	Log::TypedLog(CHN_DLL, "DIRECTORY: %s\n", (LPSTR)executableDirectory);
 	Log::TypedLog(CHN_DLL, "Patch initialized\n");
 	Log::TypedLog(CHN_DLL, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<Initializing INI settings\n");
@@ -150,7 +148,7 @@ void initPatch() {
 	Log::TypedLog(CHN_DLL, "Button font\t\t\t\t\t%s\n", (buttonfont == 2) ? "Ps2" : ((buttonfont == 3) ? "Xbox" : ((buttonfont == 4) ? "NGC" : "PC")));
 	Log::TypedLog(CHN_DLL, "Ps2Controls\t\t\t\t\t%s\n", Ps2Controls ? "Enabled" : "Disabled");
 	Log::TypedLog(CHN_DLL, "AirDrift: %s\n", airdrift ? "Enabled" : "Disabled");
-	Log::TypedLog(CHN_DLL, "WalkSpin: %s\n", walkspin ? "Enabled (THUG2)" : "Disabled (THUG)");
+	Log::TypedLog(CHN_DLL, "WalkSpin: %s\n", walkspin ? "Enabled (THUG2 default)" : "Disabled (THUG default)");
 	Log::TypedLog(CHN_DLL, "Quick bail get up: %s\n", quickgetup ? "Enabled" : "Disabled");
 	Log::TypedLog(CHN_DLL, "Language setting\t\t\t\t\t%s\n", (language == 1) ? "English" : ((language == 2) ? "French" : ((language == 3) ? "German" : "English")));
 	Log::TypedLog(CHN_DLL, "Shadow Quality\t\t\t\t\t%s\n", graphics_settings.hqshadows ? (graphics_settings.hqshadows == 2) ? "Very High" : "High" : "Default");
@@ -182,10 +180,17 @@ void initPatch() {
 		case 5: Log::TypedLog(CHN_DLL, "DropDownControl: R2\n"); break;
 	}
 	switch (laddergrabcontrol) {
-
+		case 1: Log::TypedLog(CHN_DLL, "Ladder grab button\t\t\t\tDefault: R1\n"); break;
+		case 2: Log::TypedLog(CHN_DLL, "Ladder grab button\t\t\t\tL1\n"); break;
 	}
 	switch (cavemancontrol) {
-
+		case 1: Log::TypedLog(CHN_DLL, "Caveman button\t\t\t\t\tDefault: PC default: black or white / Ps2 default: L1+R1\n"); break;
+		case 2: Log::TypedLog(CHN_DLL, "Caveman button\t\t\t\t\tL1\n"); break;
+		case 3: Log::TypedLog(CHN_DLL, "Caveman button\t\t\t\t\tR1\n"); break;
+		case 4: Log::TypedLog(CHN_DLL, "Caveman button\t\t\t\t\tL2\n"); break;
+		case 5: Log::TypedLog(CHN_DLL, "Caveman button\t\t\t\t\tR2\n"); break;
+		case 6: Log::TypedLog(CHN_DLL, "Caveman button\t\t\t\t\tL1+R1\n"); break;
+		case 7: Log::TypedLog(CHN_DLL, "Caveman button\t\t\t\t\tL2+R2\n"); break;
 	}
 	
 	if (consolewaittime < 1 || consolewaittime > 120) consolewaittime = 30;
@@ -220,11 +225,11 @@ void initPatch() {
 	/*Button font*/
 	patch_button_font(buttonfont);
 	
-	/*TODO Patch button lookup for Ps2 menu prompts (triangle = back). This goes along with redirecting CFunc::SetButtonEventMappings*/
-	//if (menubuttons == 2) {
-	//	patchByte((void*)0xDEADBEEF, 0x03);
-	//	patchByte((void*)0xDEADBEEF, 0x01);
-	//}
+	/*Patch button lookup for Ps2 menu prompts (triangle = back). This goes along with redirecting CFunc::SetButtonEventMappings*/
+	if (menubuttons == 2) {
+		patchByte((void*)0x005E2176, 0x03);
+		patchByte((void*)0x005E2178, 0x01);
+	}
 
 	/*THUG airdrift */
 	if (airdrift) {
@@ -840,8 +845,6 @@ void loadKeyBinds(struct keybinds* bindsOut) {
 		bindsOut->cameraToggle = (SDL_Scancode)GetPrivateProfileInt(KEYBIND_SECTION, "ViewToggle", SDL_SCANCODE_TAB, configFile);
 		bindsOut->cameraSwivelLock = (SDL_Scancode)GetPrivateProfileInt(KEYBIND_SECTION, "SwivelLock", SDL_SCANCODE_GRAVE, configFile);
 		bindsOut->focus = (SDL_Scancode)GetPrivateProfileInt(KEYBIND_SECTION, "Focus", SDL_SCANCODE_KP_0, configFile);
-		bindsOut->caveman = (SDL_Scancode)GetPrivateProfileInt(KEYBIND_SECTION, "Caveman", SDL_SCANCODE_KP_1, configFile);
-		bindsOut->caveman2 = (SDL_Scancode)GetPrivateProfileInt(KEYBIND_SECTION, "Caveman2", SDL_SCANCODE_KP_3, configFile);
 
 		bindsOut->grind = (SDL_Scancode)GetPrivateProfileInt(KEYBIND_SECTION, "Grind", SDL_SCANCODE_KP_8, configFile);
 		bindsOut->grab = (SDL_Scancode)GetPrivateProfileInt(KEYBIND_SECTION, "Grab", SDL_SCANCODE_KP_6, configFile);
@@ -850,6 +853,10 @@ void loadKeyBinds(struct keybinds* bindsOut) {
 
 		bindsOut->leftSpin = (SDL_Scancode)GetPrivateProfileInt(KEYBIND_SECTION, "SpinLeft", SDL_SCANCODE_KP_7, configFile);
 		bindsOut->rightSpin = (SDL_Scancode)GetPrivateProfileInt(KEYBIND_SECTION, "SpinRight", SDL_SCANCODE_KP_9, configFile);
+		bindsOut->nollie = (SDL_Scancode)GetPrivateProfileInt(KEYBIND_SECTION, "Nollie", SDL_SCANCODE_KP_1, configFile);
+		bindsOut->switchRevert = (SDL_Scancode)GetPrivateProfileInt(KEYBIND_SECTION, "Switch", SDL_SCANCODE_KP_3, configFile);
+		bindsOut->caveman = (SDL_Scancode)GetPrivateProfileInt(KEYBIND_SECTION, "Caveman", SDL_SCANCODE_KP_1, configFile);
+		bindsOut->caveman2 = (SDL_Scancode)GetPrivateProfileInt(KEYBIND_SECTION, "Caveman2", SDL_SCANCODE_KP_3, configFile);
 
 		bindsOut->right = (SDL_Scancode)GetPrivateProfileInt(KEYBIND_SECTION, "Right", SDL_SCANCODE_D, configFile);
 		bindsOut->left = (SDL_Scancode)GetPrivateProfileInt(KEYBIND_SECTION, "Left", SDL_SCANCODE_A, configFile);
@@ -878,8 +885,6 @@ void loadControllerBinds(struct controllerbinds* bindsOut) {
 		bindsOut->cameraToggle = (controllerButton)GetPrivateProfileInt(CONTROLLER_SECTION, "ViewToggle", CONTROLLER_BUTTON_BACK, configFile);
 		bindsOut->cameraSwivelLock = (controllerButton)GetPrivateProfileInt(CONTROLLER_SECTION, "SwivelLock", CONTROLLER_BUTTON_RIGHTSTICK, configFile);
 		bindsOut->focus = (controllerButton)GetPrivateProfileInt(CONTROLLER_SECTION, "Focus", CONTROLLER_BUTTON_LEFTSTICK, configFile);
-		bindsOut->caveman = (controllerButton)GetPrivateProfileInt(CONTROLLER_SECTION, "Caveman", CONTROLLER_BUTTON_RIGHTTRIGGER, configFile);
-		bindsOut->caveman2 = (controllerButton)GetPrivateProfileInt(CONTROLLER_SECTION, "Caveman2", CONTROLLER_BUTTON_LEFTTRIGGER, configFile);
 
 		bindsOut->grind = (controllerButton)GetPrivateProfileInt(CONTROLLER_SECTION, "Grind", CONTROLLER_BUTTON_Y, configFile);
 		bindsOut->grab = (controllerButton)GetPrivateProfileInt(CONTROLLER_SECTION, "Grab", CONTROLLER_BUTTON_B, configFile);
@@ -890,7 +895,9 @@ void loadControllerBinds(struct controllerbinds* bindsOut) {
 		bindsOut->rightSpin = (controllerButton)GetPrivateProfileInt(CONTROLLER_SECTION, "SpinRight", CONTROLLER_BUTTON_RIGHTSHOULDER, configFile);
 		bindsOut->nollie = (controllerButton)GetPrivateProfileInt(CONTROLLER_SECTION, "Nollie", CONTROLLER_BUTTON_LEFTTRIGGER, configFile);
 		bindsOut->switchRevert = (controllerButton)GetPrivateProfileInt(CONTROLLER_SECTION, "Switch", CONTROLLER_BUTTON_RIGHTTRIGGER, configFile);
-
+		bindsOut->caveman = (controllerButton)GetPrivateProfileInt(CONTROLLER_SECTION, "Caveman", CONTROLLER_BUTTON_LEFTTRIGGER, configFile); //white
+		bindsOut->caveman2 = (controllerButton)GetPrivateProfileInt(CONTROLLER_SECTION, "Caveman2", CONTROLLER_BUTTON_RIGHTTRIGGER, configFile); //black
+	
 		bindsOut->right = (controllerButton)GetPrivateProfileInt(CONTROLLER_SECTION, "Right", CONTROLLER_BUTTON_DPAD_RIGHT, configFile);
 		bindsOut->left = (controllerButton)GetPrivateProfileInt(CONTROLLER_SECTION, "Left", CONTROLLER_BUTTON_DPAD_LEFT, configFile);
 		bindsOut->up = (controllerButton)GetPrivateProfileInt(CONTROLLER_SECTION, "Forward", CONTROLLER_BUTTON_DPAD_UP, configFile);
@@ -900,3 +907,7 @@ void loadControllerBinds(struct controllerbinds* bindsOut) {
 		bindsOut->camera = (controllerStick)GetPrivateProfileInt(CONTROLLER_SECTION, "CameraStick", CONTROLLER_STICK_RIGHT, configFile);
 	}
 }
+
+/* -=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=- */
+/* -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Helpers -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= */
+/* -=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=- */

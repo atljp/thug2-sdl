@@ -48,7 +48,7 @@ void patchCFuncs() {
 	}
 	if (mSettings.menubuttons == 2)
 		/*Actually change the button actions when ps2 style menu navigation is selected*/
-		//CFuncs::RedirectFunction("SetButtonEventMappings", SetButtonEventMappings_Patched);
+		CFuncs::RedirectFunction("SetButtonEventMappings", SetButtonEventMappings_Patched);
 
 	Log::TypedLog(CHN_DLL, "Initializing CFuncs\n");
 }
@@ -127,8 +127,7 @@ GlobalGetStructure_NativeCall* GlobalGetStructure_Native = (GlobalGetStructure_N
 /* -=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=- */
 
 bool IsPS2_Patched(void* pParams, DummyScript* pScript) {
-	if (pScript->mScriptNameChecksum == 0x6AEC78DA /*check_for_neversoft_skaters*/  ||
-		(mSettings.isPs2Controls && pScript->mScriptNameChecksum == 0x9DB065AD /*parked_set_helper_text_mode*/))
+	if (pScript->mScriptNameChecksum == 0x6AEC78DA /*check_for_neversoft_skaters*/)
 		return true;
 	return false;
 }
@@ -258,7 +257,6 @@ bool CreateScreenElement_Patched(Script::LazyStruct* pParams, DummyScript* pScri
 			}
 		}
 	}
-
 	if (!mSettings.noadditionalscriptmods) {
 		if (pScript->mScriptNameChecksum == 0x85E146D5) { /*create_snazzy_dialog_box*/
 
@@ -279,9 +277,21 @@ bool CreateScreenElement_Patched(Script::LazyStruct* pParams, DummyScript* pScri
 				}
 			}
 		}
-	}
+		else {
+			pParams->GetChecksum(0x7321A8D6, &p_checksum, false);  /*type*/
 
-	/*call CreateScreenElement with the received parameters*/
+			if (p_checksum == 0xB12B510A /*SpriteElement*/) {
+				pParams->GetChecksum(0x7D99F28D, &p_checksum, false);  /*texture*/
+
+				if (p_checksum == 0x2074BEAE) { /*gslogo*/
+					if (pScript->mScriptNameChecksum == 0x67DA84A7) { /*make_server_list_menu*/
+						pParams->AddPair(0x7F261953 /*pos*/, -320.0f, -35.0f);
+						pParams->AddFloat(0x13B9DA7B /*scale*/, 1.3f);
+					}
+				}
+			}
+		}
+	}
 	return CreateScreenElement_Native(pParams, pScript);
 }
 
@@ -486,7 +496,23 @@ bool SetScreenElementProps_Patched(Script::LazyStruct* pParams, DummyScript* pSc
 
 bool SetButtonEventMappings_Patched(Script::LazyStruct* pParams, DummyScript* pScript) {
 
-	
+	if (pScript->mScriptNameChecksum == 0xE2602BAC /*setup_main_button_event_mappings*/) {
+		Script::LazyArray* ButtonEventMap_xbox = nullptr;
+		Script::LazyArray* ButtonMap = nullptr;
+
+		pParams->GetArray(0x87D839B8 /*xbox*/, &ButtonEventMap_xbox);		
+		ButtonMap = ButtonEventMap_xbox->GetArray(6); //edit first entry inside array: [ b pad_back ] => [ y pad_back ]
+		ButtonMap->SetChecksum(0, 0x0424D9EA /*y*/);
+		//This makes speech bubbles react to triangle
+		//ButtonMap = ButtonEventMap_xbox->GetArray(7); //[ b pad_circle ] => [ y pad_circle ]
+		//ButtonMap->SetChecksum(0, 0x0424D9EA /*y*/);
+		ButtonMap = ButtonEventMap_xbox->GetArray(12); //[ y pad_triangle2 ] => [ b pad_triangle2 ]
+		ButtonMap->SetChecksum(0, 0x8E411006 /*b*/);
+		ButtonMap = ButtonEventMap_xbox->GetArray(14); //[ y pad_space ] => [ b pad_space ]
+		ButtonMap->SetChecksum(0, 0x8E411006 /*b*/);
+		ButtonMap = ButtonEventMap_xbox->GetArray(17); //[ y pad_expand ] => [ b pad_expand ]
+		ButtonMap->SetChecksum(0, 0x8E411006 /*b*/);
+	}
 	return SetButtonEventMappings_Native(pParams, pScript);
 }
 
@@ -522,64 +548,67 @@ void editScriptsInMemory()
 {
 	/* qb data in scriptcontent.h */
 
-	removeScript(0x3B4548B8); /* longer text input */
-	uint32_t contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)enter_kb_chat_new);
-	sCreateScriptSymbolWrapper(0x9E, (uint8_t*)enter_kb_chat_new, 0x3B4548B8, contentsChecksum, "scripts\\game\\game.qb");
+	if (!mSettings.noadditionalscriptmods) {
 
-	//removeScript(0x5C51FEAB); /* test */
-	//uint32_t contentsChecksum2 = CalculateScriptContentsChecksum_Native((uint8_t*)enablesun_new);
-	//sCreateScriptSymbolWrapper(0x2B, (uint8_t*)enablesun_new, 0x5C51FEAB, contentsChecksum2, "scripts\\game\\env_fx.qb");
+		removeScript(0x3B4548B8); /* longer text input */
+		uint32_t contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)enter_kb_chat_new);
+		sCreateScriptSymbolWrapper(0x9E, (uint8_t*)enter_kb_chat_new, 0x3B4548B8, contentsChecksum, "scripts\\game\\game.qb");
 
-	removeScript(0x9F95228A); /* scalingmenu_get_limits */
-	uint32_t temp = CalculateScriptContentsChecksum_Native((uint8_t*)scalingmenu_get_limits_original);
-	sCreateScriptSymbolWrapper(0x37, (uint8_t*)scalingmenu_get_limits_addition, 0x9F95228A, temp, "scripts\\myan.qb");
+		//removeScript(0x5C51FEAB); /* test */
+		//uint32_t contentsChecksum2 = CalculateScriptContentsChecksum_Native((uint8_t*)enablesun_new);
+		//sCreateScriptSymbolWrapper(0x2B, (uint8_t*)enablesun_new, 0x5C51FEAB, contentsChecksum2, "scripts\\game\\env_fx.qb");
 
-	//removeScript(0x1B95F333); /* create_scale_options_menu */
-	//sCreateScriptSymbolWrapper(0x4EC, (uint8_t*)create_scale_options_menu_addition1, 0x1B95F333, 0xFC4A3248, "scripts\\myan.qb"); /* 0xFC4A3248 = contentsChecksum of original create_scale_options_menu script */
+		removeScript(0x9F95228A); /* scalingmenu_get_limits */
+		uint32_t temp = CalculateScriptContentsChecksum_Native((uint8_t*)scalingmenu_get_limits_original);
+		sCreateScriptSymbolWrapper(0x37, (uint8_t*)scalingmenu_get_limits_addition, 0x9F95228A, temp, "scripts\\myan.qb");
 
-	uint32_t contentsChecksum3 = CalculateScriptContentsChecksum_Native((uint8_t*)showboardmyan);
-	sCreateScriptSymbolWrapper(0x9C, (uint8_t*)showboardmyan, 0x36150445, contentsChecksum3, "scripts\\myan.qb"); /* new script: showboardmyan 0x36150445 */
+		//removeScript(0x1B95F333); /* create_scale_options_menu */
+		//sCreateScriptSymbolWrapper(0x4EC, (uint8_t*)create_scale_options_menu_addition1, 0x1B95F333, 0xFC4A3248, "scripts\\myan.qb"); /* 0xFC4A3248 = contentsChecksum of original create_scale_options_menu script */
 
-	//Helper: LoadInternetOptions_AbortAndDoneScript_myan
-	removeScript(0x33317668);
-	contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)LoadInternetOptions_AbortAndDoneScript_myan);
-	sCreateScriptSymbolWrapper(sizeof(LoadInternetOptions_AbortAndDoneScript_myan), (uint8_t*)LoadInternetOptions_AbortAndDoneScript_myan, 0x33317668, contentsChecksum, "scripts\\myan.qb");
+		uint32_t contentsChecksum3 = CalculateScriptContentsChecksum_Native((uint8_t*)showboardmyan);
+		sCreateScriptSymbolWrapper(0x9C, (uint8_t*)showboardmyan, 0x36150445, contentsChecksum3, "scripts\\myan.qb"); /* new script: showboardmyan 0x36150445 */
 
-	//Helper: LoadInternetOptions_RetryScript_myan
-	removeScript(0x1C253B2E);
-	contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)LoadInternetOptions_RetryScript_myan);
-	sCreateScriptSymbolWrapper(sizeof(LoadInternetOptions_RetryScript_myan), (uint8_t*)LoadInternetOptions_RetryScript_myan, 0x1C253B2E, contentsChecksum,  "scripts\\myan.qb");
+		//Helper: LoadInternetOptions_AbortAndDoneScript_myan
+		removeScript(0x33317668);
+		contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)LoadInternetOptions_AbortAndDoneScript_myan);
+		sCreateScriptSymbolWrapper(sizeof(LoadInternetOptions_AbortAndDoneScript_myan), (uint8_t*)LoadInternetOptions_AbortAndDoneScript_myan, 0x33317668, contentsChecksum, "scripts\\myan.qb");
 
-	//Helper: LoadInternetOptions_PadChooseScript_myan
-	removeScript(0x07440DFA);
-	contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)LoadInternetOptions_PadChooseScript_myan);
-	sCreateScriptSymbolWrapper(sizeof(LoadInternetOptions_PadChooseScript_myan), (uint8_t*)LoadInternetOptions_PadChooseScript_myan, 0x07440DFA, contentsChecksum, "scripts\\myan.qb");
+		//Helper: LoadInternetOptions_RetryScript_myan
+		removeScript(0x1C253B2E);
+		contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)LoadInternetOptions_RetryScript_myan);
+		sCreateScriptSymbolWrapper(sizeof(LoadInternetOptions_RetryScript_myan), (uint8_t*)LoadInternetOptions_RetryScript_myan, 0x1C253B2E, contentsChecksum, "scripts\\myan.qb");
 
-	//Helper: LoadInternetOptions_HelperDesc_myan
-	removeScript(0x926D3E69);
-	sCreateSymbolOfTheFormNameEqualsValue_Native((uint8_t*)LoadInternetOptions_HelperDesc_myan, 0x926D3E69, "scripts\\myan.qb");
-	__asm {add esp, 0x8}
+		//Helper: LoadInternetOptions_PadChooseScript_myan
+		removeScript(0x07440DFA);
+		contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)LoadInternetOptions_PadChooseScript_myan);
+		sCreateScriptSymbolWrapper(sizeof(LoadInternetOptions_PadChooseScript_myan), (uint8_t*)LoadInternetOptions_PadChooseScript_myan, 0x07440DFA, contentsChecksum, "scripts\\myan.qb");
 
-	if (!mSettings.boardscuffs)
-		removeScript(GenerateCRCFromString_Native("DoBoardScuff"));
+		//Helper: LoadInternetOptions_HelperDesc_myan
+		removeScript(0x926D3E69);
+		sCreateSymbolOfTheFormNameEqualsValue_Native((uint8_t*)LoadInternetOptions_HelperDesc_myan, 0x926D3E69, "scripts\\myan.qb");
+		__asm {add esp, 0x8}
 
-	if (mSettings.quickgetup)
-	{
-		removeScript(0x8F488DCA); /*bail_quick_getup2*/
-		uint32_t contentsChecksum4 = CalculateScriptContentsChecksum_Native((uint8_t*)bail_quick_getup2_new);
-		sCreateScriptSymbolWrapper(0x5A, (uint8_t*)bail_quick_getup2_new, 0x8F488DCA, contentsChecksum4, "scripts\\game\\skater\\bails.qb");
+		if (!mSettings.boardscuffs)
+			removeScript(GenerateCRCFromString_Native("DoBoardScuff"));
 
-		removeScript(0x67823B68); /*baildone*/
-		uint32_t contentsChecksum5 = CalculateScriptContentsChecksum_Native((uint8_t*)baildone_new);
-		sCreateScriptSymbolWrapper(0xC6, (uint8_t*)baildone_new, 0x67823B68, contentsChecksum5, "scripts\\game\\skater\\bails.qb");
+		if (mSettings.quickgetup)
+		{
+			removeScript(0x8F488DCA); /*bail_quick_getup2*/
+			uint32_t contentsChecksum4 = CalculateScriptContentsChecksum_Native((uint8_t*)bail_quick_getup2_new);
+			sCreateScriptSymbolWrapper(0x5A, (uint8_t*)bail_quick_getup2_new, 0x8F488DCA, contentsChecksum4, "scripts\\game\\skater\\bails.qb");
 
-		removeScript(GenerateCRCFromString_Native("NoQuickGetup"));
+			removeScript(0x67823B68); /*baildone*/
+			uint32_t contentsChecksum5 = CalculateScriptContentsChecksum_Native((uint8_t*)baildone_new);
+			sCreateScriptSymbolWrapper(0xC6, (uint8_t*)baildone_new, 0x67823B68, contentsChecksum5, "scripts\\game\\skater\\bails.qb");
+
+			removeScript(GenerateCRCFromString_Native("NoQuickGetup"));
+		}
+
+		if (!mSettings.walkspin)
+			removeScript(0x1CA80417); /*flip_skater_if_180_off*/
+
+		/*calling sCreateSymbolOfTheFormNameEqualsValue_Native here requires manual stack cleanup: __asm {add esp, 0x8}*/
 	}
-
-	if (!mSettings.walkspin)
-		removeScript(0x1CA80417); /*flip_skater_if_180_off*/
-
-	/*calling sCreateSymbolOfTheFormNameEqualsValue_Native here requires manual stack cleanup: __asm {add esp, 0x8}*/
 }
 
 void setDropDownKeys() {
@@ -788,21 +817,18 @@ void setCavemanKeys() {
 	}
 }
 
+// 1=default 2=spinleft 3=spinright
 void setLadderGrabKeys() {
-	//TODO
-	if (!mSettings.isPs2Controls) {
-		if (mSettings.laddergrabcontrol == 2) {
-			patchBytesM((BYTE*)(0x004690E0 + 2), (BYTE*)"\xC0\x00", 2); /* L2 */
-			patchBytesM((BYTE*)(0x00469ED9 + 2), (BYTE*)"\xC0\x00", 2); /* L2 */
-			patchBytesM((BYTE*)(0x00469A89 + 2), (BYTE*)"\xA0\x00", 2); /* L2 */
-		}
+
+	if (mSettings.laddergrabcontrol == 2) { // spinleft
+		patchBytesM((BYTE*)(0x0052C7A0 + 2), (BYTE*)"\xC0\x00", 2);
+		patchBytesM((BYTE*)(0x0052D4CB + 2), (BYTE*)"\xC0\x00", 2);
+		patchBytesM((BYTE*)(0x0052D06C + 2), (BYTE*)"\xA0\x00", 2);
 	}
-	else {
-		if (mSettings.laddergrabcontrol == 2) {
-			patchBytesM((BYTE*)(0x004690E0 + 2), (BYTE*)"\xA0\x01", 2); /* L1 */
-			patchBytesM((BYTE*)(0x00469ED9 + 2), (BYTE*)"\xA0\x01", 2); /* L1 */
-			patchBytesM((BYTE*)(0x00469A89 + 2), (BYTE*)"\x80\x00", 2); /* L1 */
-		}
+	else if (mSettings.laddergrabcontrol == 3) { // L3 
+		patchBytesM((BYTE*)(0x0052C7A0 + 2), (BYTE*)"\xE0\x00", 2);
+		patchBytesM((BYTE*)(0x0052D4CB + 2), (BYTE*)"\xE0\x00", 2);
+		patchBytesM((BYTE*)(0x0052D06C + 2), (BYTE*)"\xC0\x00", 2);
 	}
 }
 

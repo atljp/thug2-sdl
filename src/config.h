@@ -17,6 +17,8 @@
 #include "QB/CFuncs.h"
 #include <Resources/resources.h>
 #include <event.h>
+#include <Logger/ErrorManager.h>
+#include <d3d9types.h>
 
 #include <sys/stat.h>
 #include <string>

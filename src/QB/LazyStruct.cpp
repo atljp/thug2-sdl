@@ -332,7 +332,7 @@ namespace Script {
 	// Get array
 	//---------------------------------------
 
-	bool(__thiscall* GetArray_Native)(LazyStruct* struc, uint32_t qbKey, LazyArray** out_val, int assert) = reinterpret_cast <bool(__thiscall*)(LazyStruct * struc, uint32_t qbKey, LazyArray * *out_val, int assert)>(0x00479070);
+	bool(__thiscall* GetArray_Native)(LazyStruct* struc, uint32_t qbKey, LazyArray** out_val, int assert) = reinterpret_cast <bool(__thiscall*)(LazyStruct* struc, uint32_t qbKey, LazyArray** out_val, int assert)>(0x00476860);
 
 	bool LazyStruct::GetArray(uint32_t nameChecksum, Script::LazyArray** pp_array)
 	{

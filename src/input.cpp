@@ -93,8 +93,8 @@ struct keybinds keybinds;
 struct controllerbinds padbinds;
 uint8_t* isMenu = (uint8_t*)0x007CE46F;
 uint8_t* keyboard_on_screen = (uint8_t*)0x007CE46E;
-uint8_t* isCAG = (uint8_t*)0x0069BAA8; //TODO FIX
-uint8_t* shouldQuit = (uint8_t*)0x007d6a2c;
+uint8_t* isCAG = (uint8_t*)0x006FA7D4;
+uint8_t* shouldQuit = (uint8_t*)0x007D6A2C;
 bool instances_initialized = false;
 uint8_t isUsingKeyboard = 1;
 EdCParkEditorInstance* ParkEd;
@@ -309,7 +309,7 @@ void setUsingKeyboard(uint8_t usingKeyboard) {
 
 bool shouldUseMenuControls() {
 	if (*(uint8_t*)0x007CCBE4 == 0) return false;
-	return (*isMenu && !(ParkEd->m_state == EEditorState::vEDITING) || ((ParkEd->m_state == EEditorState::vEDITING) && ParkEd->m_paused));
+	return (*isMenu && !(ParkEd->m_state == EEditorState::vEDITING) || *isCAG || ((ParkEd->m_state == EEditorState::vEDITING) && ParkEd->m_paused));
 }
 
 
@@ -350,6 +350,7 @@ void pollController(device* dev, SDL_GameController* controller) {
 					dev->controlData[3] |= 0x01 << 7;
 				}
 				if (*isCAG) {
+					printf("CAG\n");
 					if (inputsettings.isPs2Controls) {
 						if (getButton(controller, padbinds.leftSpin)) {
 							dev->controlData[3] |= 0x01 << 3;
@@ -380,13 +381,13 @@ void pollController(device* dev, SDL_GameController* controller) {
 					}
 				}
 				else {
+					if (getButton(controller, padbinds.leftSpin)) {
+						dev->controlData[3] |= 0x01 << 2;
+					}
+					if (getButton(controller, padbinds.rightSpin)) {
+						dev->controlData[3] |= 0x01 << 3;
+					}
 					if (inputsettings.isPs2Controls) {
-						if (getButton(controller, padbinds.leftSpin)) {
-							dev->controlData[3] |= 0x01 << 2;
-						}
-						if (getButton(controller, padbinds.rightSpin)) {
-							dev->controlData[3] |= 0x01 << 3;
-						}
 						if (getButton(controller, padbinds.nollie)) {
 							dev->controlData[20] |= 0x01 << 1;
 						}
@@ -395,12 +396,6 @@ void pollController(device* dev, SDL_GameController* controller) {
 						}
 					}
 					else {
-						if (getButton(controller, padbinds.leftSpin)) {
-							dev->controlData[3] |= 0x01 << 2;
-						}
-						if (getButton(controller, padbinds.rightSpin)) {
-							dev->controlData[3] |= 0x01 << 3;
-						}
 						if (getButton(controller, padbinds.caveman)) {
 							dev->controlData[20] |= 0x01 << 1;
 						}
@@ -943,6 +938,7 @@ void do_key_input(SDL_KeyCode key) {
 	uint8_t caps = SDL_GetModState() & KMOD_CAPS;
 
 	if (key == SDLK_RETURN) {
+		bReturn_released = false;
 		key_out = 0x0D;    // CR
 	}
 	else if (key == SDLK_BACKSPACE) {
@@ -1222,8 +1218,9 @@ void patchPs2Buttons() {
 	patchByte((void*)(0x0051F4C6 + 2), 0x05);	// change PC platform to gamecube.  this just makes it default to ps2 controls. needed for rail DD on R2
 
 	// walk acid drop.
-	// Originally, only on R2 on PS2. It will be patched to L2 | R2 here
-	patchBytesM((void*)0x00527546, (BYTE*)"\x0F\x85\x0E\x00\x00\x00", 6);
+	// Only on R2 on PS2. L2 is for center view
+	patchNop((void*)0x00527546, 6);
+	patchNop((void*)0x00527636, 6);
 
 	//in_air_acid_drop
 	patchBytesM((void*)0x0050DA64, (BYTE*)"\x75\x0A", 2);
@@ -1233,17 +1230,19 @@ void patchPs2Buttons() {
 
 	//break_vert
 	patchBytesM((void*)0x00507184, (BYTE*)"\x75\x20", 2);
-	patchBytesM((void*)0x005071AE, (BYTE*)"\x0F\x85\xDC\x01\x00\x00", 6);
-	patchBytesM((void*)0x005071B4, (BYTE*)"\x8A\x87\x00\x01\x00\x00", 6);
-	patchBytesM((void*)0x005071BA, (BYTE*)"\x84\xC0", 2);
-	patchBytesM((void*)0x005071BC, (BYTE*)"\x0F\x85\xCE\x01\x00\x00", 6);
-	patchNop((void*)0x005071C2, 10);
+	patchBytesM((void*)0x005071AE, (BYTE*)"\x75\x08", 2);
+
+	//lip_jump
+	patchBytesM((void*)0x004FCC59, (BYTE*)"\x75\x0A", 2);
+
+	//ground_to_air
+	patchBytesM((void*)0x0050A257, (BYTE*)"\x75\x08", 2);
+
+	//ground_to_air_acid
+	patchBytesM((void*)0x00509E47, (BYTE*)"\x75\x0A", 2);
 
 	//air_recovery
-	patchBytesM((void*)0x0050CAC4, (BYTE*)"\x75\x06", 2);
-
-	//??? something else tpro and clownjob patch
-	patchBytesM((void*)0x00527636, (BYTE*)"\x0F\x85\x0E\x00\x00\x00", 6);
+	patchBytesM((void*)0x0050CAC4, (BYTE*)"\x75\x0A", 2);	
 
 	//No Spinlag
 	patchNop((void*)ADDR_SpinLagL, 2);
