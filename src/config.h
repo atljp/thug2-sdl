@@ -148,6 +148,9 @@ struct inputsettings {
 	uint8_t isPs2Controls;
 	uint8_t invertRXplayer1;
 	uint8_t invertRYplayer1;
+	bool savewindowposition;
+	bool disableRXplayer1;
+	bool disableRYplayer1;
 };
 
 struct scriptsettings {
@@ -229,3 +232,4 @@ void WalkCamComponent_Update_Hook();
 void loadLogSettings(struct logsettings* settingsOut);
 void loadKeyBinds(struct keybinds* bindsOut);
 void loadControllerBinds(struct controllerbinds* bindsOut);
+void dumpWindowPosition();

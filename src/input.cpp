@@ -265,8 +265,8 @@ void getStick(SDL_GameController* controller, controllerStick stick, uint8_t* xO
 		result_y = (uint8_t)((SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTY) >> 8) + 128);
 	}
 	else if (stick == CONTROLLER_STICK_RIGHT) {
-		result_x = false ? 128 : ((inputsettings.invertRXplayer1 && !(ParkEd->m_state == EEditorState::vEDITING)) ? 255 - (uint8_t)((SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_RIGHTX) >> 8) + 128) : (uint8_t)((SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_RIGHTX) >> 8) + 128));
-		result_y = false ? 128 : ((inputsettings.invertRYplayer1 && !(ParkEd->m_state == EEditorState::vEDITING)) ? 255 - (uint8_t)((SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_RIGHTY) >> 8) + 128) : (uint8_t)((SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_RIGHTY) >> 8) + 128));
+		result_x = inputsettings.disableRXplayer1 ? 128 : ((inputsettings.invertRXplayer1 && !(ParkEd->m_state == EEditorState::vEDITING)) ? 255 - (uint8_t)((SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_RIGHTX) >> 8) + 128) : (uint8_t)((SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_RIGHTX) >> 8) + 128));
+		result_y = inputsettings.disableRYplayer1 ? 128 : ((inputsettings.invertRYplayer1 && !(ParkEd->m_state == EEditorState::vEDITING)) ? 255 - (uint8_t)((SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_RIGHTY) >> 8) + 128) : (uint8_t)((SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_RIGHTY) >> 8) + 128));
 	}
 	else {
 		result_x = 0x80;
@@ -1046,9 +1046,8 @@ void handleInputEvent(SDL_Event* e) {
 void handleQuitEvent(SDL_Event* e) {
 	switch (e->type) {
 	case SDL_QUIT: {
-		//if (inputsettings.savewindowposition)
-		//	dumpWindowPosition();
-
+		if (inputsettings.savewindowposition)
+			dumpWindowPosition();
 		*shouldQuit = 1;
 		return;
 	}

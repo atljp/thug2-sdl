@@ -19,7 +19,6 @@ SDL_Window* window;
 uint32_t WCC_Update_Native_Var = 0x005251D0;
 uint32_t Cam_GetComponent_Native_Var = 0x0045DB90;
 uint32_t AddShake_Native_Var = 0x004F9F00;
-uint32_t WallRideAnywhere_RetAddr = 0x00500468;
 
 uint8_t* isFocused = (uint8_t*)0x007CCBE4;
 uint32_t* resolution_setting = (uint32_t*)0x007D643C;
@@ -272,7 +271,6 @@ void initPatch() {
 void patchStaticValues() {
 	/*
 	* //TODO
-	patchByte((void*)0x0045002C, 0x74);
 	patchByte((void*)0x0052F70F, 0xEB);
 	patchByte((void*)(0x0052F7DF + 1), 0x00);
 	patchByte((void*)0x0053654F, 0xEB);
@@ -426,10 +424,16 @@ void handleWindowEvent(SDL_Event* e) {
 		if (e->window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
 			*recreateDevice = 0;
 			//*isFocused = 0;
+			patchByte((void*)0x0045002C, 0x74);
+			patchByte((void*)0x00450016, 0x74);
+			patchByte((void*)0x00452f77, 0x75);
 		}
 		else if (e->window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
 			*recreateDevice = 1;
 			*isFocused = 1;
+			patchByte((void*)0x0045002C, 0x75);
+			patchByte((void*)0x00450016, 0x75);
+			patchByte((void*)0x00452f77, 0x74);
 		}
 		return;
 	default:
@@ -759,6 +763,9 @@ void loadInputSettings(struct inputsettings* settingsOut) {
 		settingsOut->isPs2Controls = Ps2Controls;
 		settingsOut->invertRXplayer1 = invertRXplayer1;
 		settingsOut->invertRYplayer1 = invertRYplayer1;
+		settingsOut->disableRXplayer1 = disableRXplayer1;
+		settingsOut->disableRYplayer1 = disableRYplayer1;
+		settingsOut->savewindowposition = savewindowposition;
 	}
 }
 
@@ -771,19 +778,6 @@ void getConfigFilePath(char mConfigFile[MAX_PATH]) {
 		*(exe + 1) = '\0';
 	}
 	sprintf(mConfigFile, "%s%s", executableDirectory, CONFIG_FILE_NAME);
-}
-
-void __declspec(naked) wallrideanywhere_patch()
-{
-	__asm {
-		cmp byte ptr ds : [esi + 0x228] , 0x0
-		jne $ + 0x0E
-		mov byte ptr ds : [esi + 0x22A] , 0x1
-		pop esi
-		pop ebx
-		add esp, 0x10
-		ret 8
-	}
 }
 
 /* Hook for Obj::CWalkCameraComponent::Update. Used for shakes! */
@@ -914,3 +908,12 @@ void loadControllerBinds(struct controllerbinds* bindsOut) {
 /* -=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=- */
 /* -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= Helpers -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= */
 /* -=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=- */
+
+
+void dumpWindowPosition() {
+	SDL_GetWindowPosition(getWindowHandle(), &windowposx, &windowposy);
+	char str_x[10]; sprintf(str_x, "%d", windowposx);
+	char str_y[10]; sprintf(str_y, "%d", windowposy);
+	WritePrivateProfileString(GRAPHICS_SECTION, "WindowPosX", str_x, configFile);
+	WritePrivateProfileString(GRAPHICS_SECTION, "WindowPosY", str_y, configFile);
+}
