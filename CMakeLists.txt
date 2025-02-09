@@ -76,7 +76,7 @@ set_source_files_properties(exports.def PROPERTIES HEADER_FILE_ONLY TRUE)
 set_target_properties(
     ${PROJECT_NAME_VAR}
     PROPERTIES 
-        OUTPUT_NAME "d3d9"
+        OUTPUT_NAME "thug2sdl"
 )
 
 add_executable(t2sdl-launcher)

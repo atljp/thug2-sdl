@@ -123,7 +123,7 @@ void initPatch() {
 	windowposx = GetPrivateProfileInt(GRAPHICS_SECTION, "WindowPosX", SDL_WINDOWPOS_CENTERED, configFile);
 	windowposy = GetPrivateProfileInt(GRAPHICS_SECTION, "WindowPosY", SDL_WINDOWPOS_CENTERED, configFile);
 	menubuttons = GetPrivateProfileInt(CONTROLS_SECTION, "MenuButtons", 1, configFile);
-	consolewaittime = GetPrivateProfileInt(CHAT_SECTION, "ChatWaitTime", 30, configFile);
+	consolewaittime = GetPrivateProfileInt(CHAT_SECTION, "ChatMessageTime", 30, configFile);
 	usemod = getIniBool(MOD_SECTION, "UseMod", 0, configFile);
 
 	/*Allocate console*/
@@ -305,7 +305,10 @@ void patchStaticValues() {
 	patchByte((void*)(0x005BBCD9 + 4), 0x10);
 
 	/* Blur fix (since Windows Vista) */
-	if (graphics_settings.blurfix) patchBytesM((void*)ADDR_FUNC_BlurEffect, (BYTE*)"\xB0\x01\xC3\x90\x90", 5);
+	if (graphics_settings.blurfix)
+		patchBytesM((void*)ADDR_FUNC_BlurEffect, (BYTE*)"\xB0\x01\xC3\x90\x90", 5);
+	else
+		patchBytesM((void*)0x0048c170, (BYTE*)"\x51\x8B\x4C\x24\x08", 5);
 
 	/* No CAS integrity check */
 	patchNop((void*)0x005A8A01, 2);

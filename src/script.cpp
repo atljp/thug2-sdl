@@ -23,7 +23,7 @@ struct SkateInstance /* singleton of Skate::Instance() */
 
 uint8_t console_wait_time[] = { //0x074DBDBB
 	/*console_wait_time = 30*/
-	0x16, 0xBB, 0xBD, 0x4D, 0x07, 0x07, 0x17, 0x1E, 0x00, 0x00, 0x00, 0x01
+	0x17, 0x1E, 0x00, 0x00, 0x00, 0x01
 };
 
 
@@ -57,9 +57,10 @@ void initScriptPatch(){
 	if (!mSettings.noadditionalscriptmods) {
 		//TODO setButtonPrompts();
 		Log::TypedLog(CHN_DLL, "Adjusting button prompts\n");
+		editScriptsInMemory(); /*loads single functions of scripts and overwrites existing ones*/
+		Log::TypedLog(CHN_DLL, "Patching scripts in memory\n");
+		
 	}
-	editScriptsInMemory(); /*loads single functions of scripts and overwrites existing ones*/
-	Log::TypedLog(CHN_DLL, "Patching scripts in memory\n");
 	setDropDownKeys();
 	setCavemanKeys();
 	setLadderGrabKeys();
@@ -546,69 +547,94 @@ void __fastcall sCreateScriptSymbolWrapper(uint32_t size, const uint8_t* p_data,
 
 void editScriptsInMemory()
 {
-	/* qb data in scriptcontent.h */
+	/* 
+	qb data in scriptcontent.h
+	calling sCreateSymbolOfTheFormNameEqualsValue_Native here requires manual stack cleanup: __asm {add esp, 0x8}
+	*/
 
-	if (!mSettings.noadditionalscriptmods) {
+	removeScript(0x3B4548B8); /* longer text input */
+	uint32_t contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)enter_kb_chat_new);
+	sCreateScriptSymbolWrapper(0x9E, (uint8_t*)enter_kb_chat_new, 0x3B4548B8, contentsChecksum, "scripts\\game\\game.qb");
 
-		removeScript(0x3B4548B8); /* longer text input */
-		uint32_t contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)enter_kb_chat_new);
-		sCreateScriptSymbolWrapper(0x9E, (uint8_t*)enter_kb_chat_new, 0x3B4548B8, contentsChecksum, "scripts\\game\\game.qb");
+	//removeScript(0x5C51FEAB);
+	//uint32_t contentsChecksum2 = CalculateScriptContentsChecksum_Native((uint8_t*)enablesun_new);
+	//sCreateScriptSymbolWrapper(0x2B, (uint8_t*)enablesun_new, 0x5C51FEAB, contentsChecksum2, "scripts\\game\\env_fx.qb");
 
-		//removeScript(0x5C51FEAB); /* test */
-		//uint32_t contentsChecksum2 = CalculateScriptContentsChecksum_Native((uint8_t*)enablesun_new);
-		//sCreateScriptSymbolWrapper(0x2B, (uint8_t*)enablesun_new, 0x5C51FEAB, contentsChecksum2, "scripts\\game\\env_fx.qb");
+	removeScript(0x9F95228A); /* scalingmenu_get_limits */
+	contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)scalingmenu_get_limits_original);
+	sCreateScriptSymbolWrapper(0x37, (uint8_t*)scalingmenu_get_limits_addition, 0x9F95228A, contentsChecksum, "scripts\\myan.qb");
 
-		removeScript(0x9F95228A); /* scalingmenu_get_limits */
-		uint32_t temp = CalculateScriptContentsChecksum_Native((uint8_t*)scalingmenu_get_limits_original);
-		sCreateScriptSymbolWrapper(0x37, (uint8_t*)scalingmenu_get_limits_addition, 0x9F95228A, temp, "scripts\\myan.qb");
+	contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)showboardmyan);
+	sCreateScriptSymbolWrapper(0x9C, (uint8_t*)showboardmyan, 0x36150445, contentsChecksum, "scripts\\myan.qb"); /* new script: showboardmyan 0x36150445 */
 
-		//removeScript(0x1B95F333); /* create_scale_options_menu */
-		//sCreateScriptSymbolWrapper(0x4EC, (uint8_t*)create_scale_options_menu_addition1, 0x1B95F333, 0xFC4A3248, "scripts\\myan.qb"); /* 0xFC4A3248 = contentsChecksum of original create_scale_options_menu script */
+	//Helper: LoadInternetOptions_AbortAndDoneScript_myan
+	removeScript(0x33317668);
+	contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)LoadInternetOptions_AbortAndDoneScript_myan);
+	sCreateScriptSymbolWrapper(sizeof(LoadInternetOptions_AbortAndDoneScript_myan), (uint8_t*)LoadInternetOptions_AbortAndDoneScript_myan, 0x33317668, contentsChecksum, "scripts\\myan.qb");
 
-		uint32_t contentsChecksum3 = CalculateScriptContentsChecksum_Native((uint8_t*)showboardmyan);
-		sCreateScriptSymbolWrapper(0x9C, (uint8_t*)showboardmyan, 0x36150445, contentsChecksum3, "scripts\\myan.qb"); /* new script: showboardmyan 0x36150445 */
+	//Helper: LoadInternetOptions_RetryScript_myan
+	removeScript(0x1C253B2E);
+	contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)LoadInternetOptions_RetryScript_myan);
+	sCreateScriptSymbolWrapper(sizeof(LoadInternetOptions_RetryScript_myan), (uint8_t*)LoadInternetOptions_RetryScript_myan, 0x1C253B2E, contentsChecksum, "scripts\\myan.qb");
 
-		//Helper: LoadInternetOptions_AbortAndDoneScript_myan
-		removeScript(0x33317668);
-		contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)LoadInternetOptions_AbortAndDoneScript_myan);
-		sCreateScriptSymbolWrapper(sizeof(LoadInternetOptions_AbortAndDoneScript_myan), (uint8_t*)LoadInternetOptions_AbortAndDoneScript_myan, 0x33317668, contentsChecksum, "scripts\\myan.qb");
+	//Helper: LoadInternetOptions_PadChooseScript_myan
+	removeScript(0x07440DFA);
+	contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)LoadInternetOptions_PadChooseScript_myan);
+	sCreateScriptSymbolWrapper(sizeof(LoadInternetOptions_PadChooseScript_myan), (uint8_t*)LoadInternetOptions_PadChooseScript_myan, 0x07440DFA, contentsChecksum, "scripts\\myan.qb");
 
-		//Helper: LoadInternetOptions_RetryScript_myan
-		removeScript(0x1C253B2E);
-		contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)LoadInternetOptions_RetryScript_myan);
-		sCreateScriptSymbolWrapper(sizeof(LoadInternetOptions_RetryScript_myan), (uint8_t*)LoadInternetOptions_RetryScript_myan, 0x1C253B2E, contentsChecksum, "scripts\\myan.qb");
+	//Helper: LoadInternetOptions_HelperDesc_myan
+	removeScript(0x926D3E69);
+	sCreateSymbolOfTheFormNameEqualsValue_Native((uint8_t*)LoadInternetOptions_HelperDesc_myan, 0x926D3E69, "scripts\\myan.qb");
+	__asm {add esp, 0x8}
 
-		//Helper: LoadInternetOptions_PadChooseScript_myan
-		removeScript(0x07440DFA);
-		contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)LoadInternetOptions_PadChooseScript_myan);
-		sCreateScriptSymbolWrapper(sizeof(LoadInternetOptions_PadChooseScript_myan), (uint8_t*)LoadInternetOptions_PadChooseScript_myan, 0x07440DFA, contentsChecksum, "scripts\\myan.qb");
+	if (!mSettings.boardscuffs)
+		removeScript(GenerateCRCFromString_Native("DoBoardScuff"));
 
-		//Helper: LoadInternetOptions_HelperDesc_myan
-		removeScript(0x926D3E69);
-		sCreateSymbolOfTheFormNameEqualsValue_Native((uint8_t*)LoadInternetOptions_HelperDesc_myan, 0x926D3E69, "scripts\\myan.qb");
-		__asm {add esp, 0x8}
+	if (mSettings.quickgetup)
+	{
+		removeScript(0x8F488DCA); /*bail_quick_getup2*/
+		contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)bail_quick_getup2_new);
+		sCreateScriptSymbolWrapper(0x5A, (uint8_t*)bail_quick_getup2_new, 0x8F488DCA, contentsChecksum, "scripts\\game\\skater\\bails.qb");
 
-		if (!mSettings.boardscuffs)
-			removeScript(GenerateCRCFromString_Native("DoBoardScuff"));
+		removeScript(0x67823B68); /*baildone*/
+		contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)baildone_new);
+		sCreateScriptSymbolWrapper(0xC6, (uint8_t*)baildone_new, 0x67823B68, contentsChecksum, "scripts\\game\\skater\\bails.qb");
 
-		if (mSettings.quickgetup)
-		{
-			removeScript(0x8F488DCA); /*bail_quick_getup2*/
-			uint32_t contentsChecksum4 = CalculateScriptContentsChecksum_Native((uint8_t*)bail_quick_getup2_new);
-			sCreateScriptSymbolWrapper(0x5A, (uint8_t*)bail_quick_getup2_new, 0x8F488DCA, contentsChecksum4, "scripts\\game\\skater\\bails.qb");
-
-			removeScript(0x67823B68); /*baildone*/
-			uint32_t contentsChecksum5 = CalculateScriptContentsChecksum_Native((uint8_t*)baildone_new);
-			sCreateScriptSymbolWrapper(0xC6, (uint8_t*)baildone_new, 0x67823B68, contentsChecksum5, "scripts\\game\\skater\\bails.qb");
-
-			removeScript(GenerateCRCFromString_Native("NoQuickGetup"));
-		}
-
-		if (!mSettings.walkspin)
-			removeScript(0x1CA80417); /*flip_skater_if_180_off*/
-
-		/*calling sCreateSymbolOfTheFormNameEqualsValue_Native here requires manual stack cleanup: __asm {add esp, 0x8}*/
+		removeScript(GenerateCRCFromString_Native("NoQuickGetup"));
 	}
+
+	if (!mSettings.walkspin)
+		removeScript(0x1CA80417); /*flip_skater_if_180_off*/
+
+	//No freeze when changing levels in net games
+	removeScript(0x39C58EA1); /*change_level*/
+	contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)change_level_new);
+	sCreateScriptSymbolWrapper(sizeof(change_level_new), (uint8_t*)change_level_new, 0x39C58EA1, contentsChecksum, "game\\skutils.qb");
+
+	//No chat reset after games start
+	if (mSettings.consolewaittime != 30) {
+		if (mSettings.consolewaittime && mSettings.consolewaittime <= 120) console_wait_time[1] = mSettings.consolewaittime;
+	}
+
+	removeScript(0x074DBDBB); /*console_wait_time*/
+	sCreateSymbolOfTheFormNameEqualsValue_Native((uint8_t*)console_wait_time, 0x074DBDBB, "engine\\menu\\consolemessage.qb");
+	__asm {add esp, 0x8}
+
+	removeScript(0x0C42890C); /*kill_net_panel_messages*/
+	contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)kill_net_panel_messages_new);
+	sCreateScriptSymbolWrapper(sizeof(kill_net_panel_messages_new), (uint8_t*)kill_net_panel_messages_new, 0x0C42890C, contentsChecksum, "scripts\\game\\net\\net.qb");
+
+	removeScript(0xCCB19938); /*create_console_message*/
+	contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)create_console_message_new);
+	sCreateScriptSymbolWrapper(sizeof(create_console_message_new), (uint8_t*)create_console_message_new, 0xCCB19938, contentsChecksum, "engine\\menu\\consolemessage.qb");
+
+	removeScript(0xF2F8DF40); /*console_message_wait_and_die*/
+	contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)console_message_wait_and_die_new);
+	sCreateScriptSymbolWrapper(sizeof(console_message_wait_and_die_new), (uint8_t*)console_message_wait_and_die_new, 0xF2F8DF40, contentsChecksum, "engine\\menu\\consolemessage.qb");
+
+	removeScript(0x8C34FE0A); /*gameflow_startrun*/
+	contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)gameflow_startrun_new);
+	sCreateScriptSymbolWrapper(sizeof(gameflow_startrun_new), (uint8_t*)gameflow_startrun_new, 0x8C34FE0A, contentsChecksum, "game\\gameflow.qb");
 }
 
 void setDropDownKeys() {
@@ -817,7 +843,6 @@ void setCavemanKeys() {
 	}
 }
 
-// 1=default 2=spinleft 3=spinright
 void setLadderGrabKeys() {
 
 	if (mSettings.laddergrabcontrol == 2) { // spinleft

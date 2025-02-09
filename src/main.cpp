@@ -1,8 +1,6 @@
 #include "d3d9.h"
 #include "config.h"
 
-BOOL dpi_result = SetProcessDPIAware(); //Prevent DPI scaling
-
 #pragma data_seg (".d3d9_shared")
 HINSTANCE gl_hOriginalDll;
 HINSTANCE gl_hThisInstance;

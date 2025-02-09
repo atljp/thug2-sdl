@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
 
     if (argc != 2) {
 
-        const char* filename = "THUG.exe";
+        const char* filename = "THUG2.exe";
         file = fopen(filename, "r+b");
         if (!file) {
             file_found = 0;
@@ -71,9 +71,9 @@ int main(int argc, char* argv[])
 
     if (file_found) {
         // The hex pattern to search for
-        const unsigned char pattern[] = { 0x09, 0x00, 0x44, 0x69, 0x72, 0x65, 0x63, 0x74, 0x33, 0x44, 0x43 };
-        const unsigned char pattern_new_loc[] = { 0x50, 0x6F, 0x73, 0x74, 0x54, 0x68, 0x72, 0x65, 0x61, 0x64, 0x4D, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x41, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-        const unsigned char new_dll_string[] = { 0x09, 0x00, 0x44, 0x69, 0x72, 0x65, 0x63, 0x74, 0x33, 0x44, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x39, 0x00, 0x74, 0x68, 0x75, 0x67, 0x73, 0x64, 0x6C, 0x2E, 0x64, 0x6C, 0x6C, 0x00 };
+        const unsigned char pattern[] = { 0x00, 0x00, 0x44, 0x69, 0x72, 0x65, 0x63, 0x74, 0x33, 0x44, 0x43 };
+        const unsigned char pattern_new_loc[] = { 0x47, 0x65, 0x74, 0x53, 0x79, 0x73, 0x74, 0x65, 0x6D, 0x69, 0x6E, 0x66, 0x6F, 0x06, 0x42, 0x06, 0x2C, 0x06, 0x43, 0x06, 0x68, 0x06, 0x6B, 0x06, 0x6B, 0x06, 0x60, 0x06, 0x2B, 0x42, 0x42, 0x00, 0x00, 0x00, 0x00, 0x00 };
+        const unsigned char new_dll_string[] = { 0x09, 0x00, 0x44, 0x69, 0x72, 0x65, 0x63, 0x74, 0x33, 0x44, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x39, 0x00, 0x74, 0x68, 0x75, 0x67, 0x32, 0x73, 0x64, 0x6C, 0x2E, 0x64, 0x6C, 0x6C, 0x00 };
         const unsigned char pattern_ptr[4]; //pointer to pattern[]
         const unsigned char pattern_ptr_dll[4]; //pointer to pattern+18 (dll filename)
         const unsigned char pattern_new_pointer_a[4];
@@ -91,7 +91,8 @@ int main(int argc, char* argv[])
         // Get offset of original Direct3DCreate9 Text
         d3d9string_pattern_offset = search_pattern(file, pattern, sizeof(pattern), 0);
         if (d3d9string_pattern_offset)
-            printf("DLL string found at offset: 0x%08x\n", d3d9string_pattern_offset);
+            //printf("DLL string found at offset: 0x%08x\n", d3d9string_pattern_offset);
+            printf("- Found old DLL string\n");
         else
             error |= 1;
 
@@ -102,7 +103,8 @@ int main(int argc, char* argv[])
         // There will be two occurrences. Search for the first one from the start of the file
         ptr_a = search_pattern(file, pattern_ptr, sizeof(pattern_ptr), 0);
         if (ptr_a)
-            printf("Pointer A found at offset: 0x%08x\n", ptr_a);
+            //printf("Pointer A found at offset: 0x%08x\n", ptr_a);
+            printf("- Found Pointer A to DLL string\n");
         else
             error |= 1;
 
@@ -110,7 +112,8 @@ int main(int argc, char* argv[])
         ptr_b = search_pattern(file, pattern_ptr, sizeof(pattern_ptr), ptr_a + 4);
         if (ptr_b) {
             ptr_b = ptr_b + ptr_a + 4; // Correct the offset
-            printf("Pointer B found at offset: 0x%08x\n", ptr_b);
+            //printf("Pointer B found at offset: 0x%08x\n", ptr_b);
+            printf("- Found Pointer B to DLL string\n");
         }
         else {
             error |= 1;
@@ -119,14 +122,16 @@ int main(int argc, char* argv[])
         // Search for the dll pointer
         int ptr_dll = search_pattern(file, pattern_ptr_dll, sizeof(pattern_ptr_dll), 0);
         if (ptr_dll)
-            printf("Pointer C found at offset: 0x%08x\n", ptr_dll);
+            //printf("Pointer C found at offset: 0x%08x\n", ptr_dll);
+            printf("- Found Pointer C to DLL string\n");
         else
             error |= 1;
 
         // Search for the new location of our d3d9 proxy dll. It will be patched after the PostThreadMessageA string (pattern_new_loc)
         int new_loc = search_pattern(file, pattern_new_loc, sizeof(pattern_new_loc), 0);
         if (new_loc)
-            printf("New DLL string will be at: 0x%08x\n", new_loc + sizeof(pattern_new_loc));
+            //printf("New DLL string will be at: 0x%08x\n", new_loc + sizeof(pattern_new_loc));
+            printf("- Writing new DLL string\n");
         else
             error |= 1;
 
@@ -154,7 +159,7 @@ int main(int argc, char* argv[])
             fclose(file);
 
             // Write the modified buffer to the new file
-            FILE* new_file = fopen("THUG-SDL.exe", "wb");
+            FILE* new_file = fopen("THUG2-SDL.exe", "wb");
             if (!new_file) {
                 perror("Failed to create new file");
                 free(buffer);
@@ -213,7 +218,7 @@ int main(int argc, char* argv[])
             }
 
             if (!error)
-                printf("THUG-SDL.exe was successfully patched\n");
+                printf("- THUG2-SDL.exe was successfully patched\n");
             
 
             fclose(new_file);
@@ -221,13 +226,13 @@ int main(int argc, char* argv[])
             free(buffer);
         }
         else {
-            printf("Failed to patch the file. The offsets did not match the expected THUG.exe\n");
+            printf("Failed to patch the file. The offsets did not match the expected THUG2.exe\n");
         }
     }
     else {
         printf("Failed to open file\n");
         printf("Usage (command line): %s <filename>\n", argv[0]);
-        printf("Usage (Windows Explorer): Drag THUG.exe onto the patcher or just double click it when THUG.exe is in the same folder\n");
+        printf("Usage (Windows Explorer): Drag THUG.exe onto the patcher or just double click it when THUG2.exe is in the same folder\n");
     }
     system("PAUSE");
     return 0;

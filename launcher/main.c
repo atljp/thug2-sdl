@@ -322,7 +322,7 @@ void loadSettings() {
 
 	// CHAT
 	settings.chatsize = GetPrivateProfileInt("Chat", "ChatSize", 3, configFile);
-	settings.chatwaittime = GetPrivateProfileInt("Chat", "ChatWaitTime", 30, configFile);
+	settings.chatwaittime = GetPrivateProfileInt("Chat", "ChatMessageTime", 30, configFile);
 
 	// ADDITIONAL MODS
 	settings.additionalmods = getIniBool("AdditionalMods", "UseMod", 0, configFile);
