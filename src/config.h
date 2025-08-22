@@ -167,6 +167,7 @@ struct extmodsettings {
 	char* configfile;
 	char* workingdir;
 	char* windowtitle;
+	bool noadditionalscriptmods;
 };
 
 

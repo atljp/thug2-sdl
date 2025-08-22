@@ -604,7 +604,7 @@ void loadModSettings(struct extmodsettings* modsettingsOut) {
 	modsettingsOut->usemod = usemod;
 	modsettingsOut->configfile = configFile;
 	modsettingsOut->workingdir = (char*)executableDirectory;
-
+	modsettingsOut->noadditionalscriptmods = noadditionalscriptmods;
 }
 
 int getIniBool(const char* section, const char* key, int def, char* file) {

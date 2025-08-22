@@ -635,13 +635,6 @@ void editScriptsInMemory()
 	removeScript(0x8C34FE0A); /*gameflow_startrun*/
 	contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)gameflow_startrun_new);
 	sCreateScriptSymbolWrapper(sizeof(gameflow_startrun_new), (uint8_t*)gameflow_startrun_new, 0x8C34FE0A, contentsChecksum, "game\\gameflow.qb");
-
-	//Restore onscreen keyboard
-	if (pResource_keyboard_restored = getResource(IDR_KEYBOARD_RESTORED)) {
-		removeScript(0xF0425254); /*create_onscreen_keyboard*/
-		contentsChecksum = CalculateScriptContentsChecksum_Native((uint8_t*)pResource_keyboard_restored);
-		sCreateScriptSymbolWrapper(5896, (uint8_t*)pResource_keyboard_restored, 0xF0425254, contentsChecksum, "engine\\menu\\keyboard.qb");
-	}
 }
 
 void setDropDownKeys() {

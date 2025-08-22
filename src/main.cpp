@@ -13,7 +13,7 @@ BOOL WINAPI DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved
     case DLL_PROCESS_ATTACH:
 		InitInstance(hModule);
 		initPatch();
-		initMod();
+		InitModloader();
 		patchWindow();
 		patchresbuffer();
 		patchInput();
