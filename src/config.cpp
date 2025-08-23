@@ -128,7 +128,7 @@ void initPatch() {
 	/*Allocate console*/
 	if (console) {
 		Log::Initialize();
-		patchDWord((void*)0x0067F3D4, (uint32_t)&Log::CFunc_PrintF);
+		CFuncs::RedirectFunction("Printf", (void*)Log::CFunc_PrintF);
 		if (console == 2) { patchJump((void*)0x00401C30, &Log::PrintLog); }
 	}
 

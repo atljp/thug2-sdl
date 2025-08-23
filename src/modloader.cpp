@@ -378,7 +378,7 @@ void __cdecl parseQB_Patched(char* p_fileName, uint8_t* p_qb, int unused, int as
 
 		if (!strcmp(p_fileName, kv.first.c_str())) {
 			Log::TypedLog(CHN_MOD, "Loading %s -> %s\n", kv.first.c_str(), kv.second.c_str());
-			ParseQB_Native(p_fileName, getQbData("\\myanmod\\manualtricks.qb"), 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
+			ParseQB_Native(p_fileName, getQbData(kv.second), 1, assertIfDuplicateSymbols, allocateChecksumNameLookupTable);
 			found_file = 1;
 		}
 	}

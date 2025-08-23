@@ -32,7 +32,7 @@ namespace Log {
 		if (l_UseConsole)
 		{
 			AllocConsole();
-			SetConsoleTitle("THUG CONSOLE WINDOW");
+			SetConsoleTitle("THUG2 CONSOLE WINDOW");
 			freopen_s(&CON, "CONIN$", "r", stdin);
 			freopen_s(&CON, "CONOUT$", "w", stdout);
 			freopen_s(&CON, "CONOUT$", "w", stderr);
@@ -128,8 +128,6 @@ namespace Log {
 
 	void Error(const char* Format, ...)
 	{
-		//THAWPlus::DebugScriptCallstack();
-
 		char final_buffer[2000];
 
 		va_list args;
@@ -164,7 +162,7 @@ namespace Log {
 
 	bool CFunc_PrintF(Script::LazyStruct* pParams, void* pScript)
 	{
-		char buf[1024];
+		char buf[3000];
 		StringFromParams(buf, pParams);
 
 		TypedLog(CHN_LOG, "%s", buf);
