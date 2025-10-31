@@ -7,14 +7,6 @@ LPVOID pResource_keyboard_restored;
 //Static asm addresses
 uint32_t sCreateScriptSymbol = 0x0046FE40;
 
-struct DummyScript
-{
-	char unk1[20];
-	Script::LazyStruct* GetParams;
-	char unk2[176];
-	uint32_t mScriptNameChecksum;
-};
-
 struct SkateInstance /* singleton of Skate::Instance() */
 {
 	char unk[888];
@@ -185,8 +177,10 @@ bool CreateScreenElement_Patched(Script::LazyStruct* pParams, DummyScript* pScri
 	uint32_t p_checksum = 0;
 	uint32_t p_checksum2 = 0;
 
-	if ((Skate->level == 0xE92ECAFE && getaspectratio() > 1.34f && getaspectratio() < 1.8f)) { /*level: load_mainmenu*/
+	//printf("ASPECT RATIO FROM SCREEN MODE: %.2f\n", getaspectratio(true));
 
+	if ((Skate->level == 0xE92ECAFE && getaspectratio() > 1.34f && getaspectratio() < 1.8f)) { /*level: load_mainmenu*/
+		
 		if (pScript->mScriptNameChecksum == 0x7C92D11A) {  /*script: make_mainmenu_3d_plane*/
 
 			pParams->GetChecksum(0x40C698AF, &p_checksum, false);  /*id*/
@@ -194,41 +188,51 @@ bool CreateScreenElement_Patched(Script::LazyStruct* pParams, DummyScript* pScri
 			if (p_checksum == 0xBC4B9584) /*bg_plane*/
 				pParams->AddInteger(0xED7C6031, -281); /*cameraz*/
 		}
-		else if (pScript->mScriptNameChecksum == 0xAD62B0B3) { /*script: build_roundbar*/
 
-			pParams->GetChecksum(0x7321A8D6, &p_checksum, false); /*type*/
-			pParams->GetChecksum(0x40C698AF, &p_checksum2, false); /*id*/
+		if (get_screenmode() != 1) {
 
-			if (p_checksum == 0x5B9DA842 /*containerelement*/ && p_checksum2 == 0x1954867E /*roundbar_bar*/) {
-				if (getaspectratio() > 1.6f) {
-					pParams->AddFloat(0x13B9DA7B, 0.80f); /*scale*/
-					pParams->AddPair(0x7F261953, 157.0f, 213.0f); /*pos*/
-				}
-				else {
-					pParams->AddFloat(0x13B9DA7B, 0.88f); /*scale*/
-					pParams->AddPair(0x7F261953, 142.0f, 212.0f); /*pos*/
+			if (pScript->mScriptNameChecksum == 0x7C92D11A) {  /*script: make_mainmenu_3d_plane*/
+
+				pParams->GetChecksum(0x40C698AF, &p_checksum, false);  /*id*/
+
+				if (p_checksum == 0xBC4B9584) /*bg_plane*/
+					pParams->AddInteger(0xED7C6031, -281); /*cameraz*/
+			}
+			else if (pScript->mScriptNameChecksum == 0xAD62B0B3) { /*script: build_roundbar*/
+
+				pParams->GetChecksum(0x7321A8D6, &p_checksum, false); /*type*/
+				pParams->GetChecksum(0x40C698AF, &p_checksum2, false); /*id*/
+
+				if (p_checksum == 0x5B9DA842 /*containerelement*/ && p_checksum2 == 0x1954867E /*roundbar_bar*/) {
+					if (getaspectratio() > 1.6f) {
+						pParams->AddFloat(0x13B9DA7B, 0.80f); /*scale*/
+						pParams->AddPair(0x7F261953, 157.0f, 213.0f); /*pos*/
+					}
+					else {
+						pParams->AddFloat(0x13B9DA7B, 0.88f); /*scale*/
+						pParams->AddPair(0x7F261953, 142.0f, 212.0f); /*pos*/
+					}
 				}
 			}
-		}
-		else if (pScript->mScriptNameChecksum == 0x59F6E121) { /*script: make_spin_menu*/
+			else if (pScript->mScriptNameChecksum == 0x59F6E121) { /*script: make_spin_menu*/
 
-			pParams->GetChecksum(0x7321A8D6, &p_checksum, false); /*type*/
-			pParams->GetChecksum(0x40C698AF, &p_checksum2, false); /*id*/
+				pParams->GetChecksum(0x7321A8D6, &p_checksum, false); /*type*/
+				pParams->GetChecksum(0x40C698AF, &p_checksum2, false); /*id*/
 
-			if (p_checksum == 0x130EF802 /* vmenu */ && p_checksum2 == 0xB0524B44 /*main_vmenu*/) {
-				if (getaspectratio() > 1.6f) {
-					pParams->AddPair(0x7F261953, 116.0f, 214.0f); /*pos*/
-					pParams->AddFloat(0x13B9DA7B, 0.72f); /*scale*/
-				}
-				else {
-					pParams->AddPair(0x7F261953, 95.0f, 213.0f); /*pos*/
-					pParams->AddFloat(0x13B9DA7B, 0.82f); /*scale*/
+				if (p_checksum == 0x130EF802 /* vmenu */ && p_checksum2 == 0xB0524B44 /*main_vmenu*/) {
+					if (getaspectratio() > 1.6f) {
+						pParams->AddPair(0x7F261953, 116.0f, 214.0f); /*pos*/
+						pParams->AddFloat(0x13B9DA7B, 0.72f); /*scale*/
+					}
+					else {
+						pParams->AddPair(0x7F261953, 95.0f, 213.0f); /*pos*/
+						pParams->AddFloat(0x13B9DA7B, 0.82f); /*scale*/
+					}
 				}
 			}
 		}
 	}
 	else if (Skate->level == 0xE92ECAFE && getaspectratio() > 1.8f) {
-
 		if (pScript->mScriptNameChecksum == 0x7C92D11A) {  /*script: make_mainmenu_3d_plane*/
 
 			pParams->GetChecksum(0x40C698AF, &p_checksum, false);  /*id*/

@@ -36,7 +36,7 @@ void InitModloader() {
 	if (mExtModsettings.usemod) {
 
 		if (!(mExtModsettings.noadditionalscriptmods))
-			Log::TypedLog(CHN_MOD, "WARNING! SCRIPT MODS FROM THUG-SDL ARE ENABLED. COMPATIBILITY IS NOT GUARANTEED!\n");
+			Log::TypedLog(CHN_MOD, "WARNING! SCRIPT MODS FROM THUG2-SDL ARE ENABLED. COMPATIBILITY IS NOT GUARANTEED!\n");
 
 		// Check if modfolder and mod.ini are valid
 		// This will return a handle to the specified mod.ini and the mod folder.
@@ -62,6 +62,7 @@ void InitModloader() {
 		}
 	}
 	else if (!(mExtModsettings.noadditionalscriptmods)) {
+
 		// Load custom qb_scripts.prx by default. 
 		// This contains most of the data that was previously loaded in script.cpp as well as the observe menu, in game menu, physics etc.
 		if (getModDefaultPreFile()) {
@@ -101,8 +102,8 @@ bool getModIni() {
 	// Check if modfolder was specified in partymod.ini. Folders have to be relative to the game directory (data\pre\mymod)
 	GetPrivateProfileString(MOD_SECTION, "Folder", "", modfolder, sizeof(modfolder), mExtModsettings.configfile);
 
-	if (strlen(modfolder))
-	{
+	if (strlen(modfolder)) {
+
 		// Maybe replace forward slashes with backslashes
 		for (int i = 0; i < strlen(modfolder); ++i) {
 			if (modfolder[i] == '/') {
@@ -144,20 +145,19 @@ bool getModIni() {
 }
 
 bool getModDefaultPreFile() {
-
 	char preFile_fullpath[MAX_PATH];
 	sprintf_s(preFile_fullpath, "%s%s", mExtModsettings.workingdir, "thug2sdl.prx");
 
 	if (checkFileExists(preFile_fullpath)) {
-		preFilesMap["qb_Scripts.prx"] = "..\\..\\thug2sdl.prx";
-		printf("Found file %s\n", preFile_fullpath);
+		preFilesMap["qb_scripts.prx"] = "..\\..\\thug2sdl.prx";
+		Log::TypedLog(CHN_MOD, "Found file %s\n", preFile_fullpath);
 		return true;
 	}
 	// Fallback
 	sprintf_s(preFile_fullpath, "%s%s", mExtModsettings.workingdir, "data\\pre\\thug2sdl.prx");
 	if (checkFileExists(preFile_fullpath)) {
 		preFilesMap["qp_scripts.prx"] = "thugsdl.prx";
-		printf("Found file %s\n", preFile_fullpath);
+		Log::TypedLog(CHN_MOD, "Found file %s\n", preFile_fullpath);
 		return true;
 	}
 	printf("Could not find thug2sdl.prx. Falling back to data\\pre\\qb_scripts.prx\n");
@@ -271,11 +271,6 @@ bool getAllQbFiles() {
 
 uint8_t* getQbData(const std::string& fileName) {
 
-	uint32_t abc = 0xDEADBEEF;
-	printf("abc: 0x%08x\n", abc);
-
-
-
 	char qbfile_fullpath[MAX_PATH];
 
 	sprintf_s(qbfile_fullpath, "%s%s%s", mExtModsettings.workingdir, "data\\pre\\", fileName.c_str());
@@ -303,26 +298,24 @@ uint8_t* getQbData(const std::string& fileName) {
 }
 
 bool checkFolderExists(char* folder) {
-	// Check if specified mod folder exists on hard drive
+
 	struct stat info;
 	stat(folder, &info);
+
 	if (info.st_mode & S_IFDIR)
 		return true;
-	else {
+	else
 		return false;
-	}
 }
 
 bool checkFileExists(char* file) {
-	// Check if specified file exists on hard drive
+
 	std::ifstream infile(file);
 
-	if (infile.good()) {
+	if (infile.good())
 		return true;
-	}
-	else {
+	else
 		return false;
-	}
 }
 
 char* getWindowTitle() {
@@ -337,6 +330,7 @@ bool isKeyInMap(const std::map<std::string, std::string>& keyValues, const std::
 	}
 	return false;
 }
+
 
 /* -=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=- */
 /* -=-=-=-=-=-=-=-=-=-=-=-=-=-=- Hooked functions =--=-=-=-=-=-=-=-=-=-=-=-=-=-= */
@@ -358,7 +352,6 @@ void PIPLoadPre_Wrapper(uint8_t* p_data)
 
 void __fastcall PreMgrLoadPre_Wrapper(void* arg1, void* unused, uint8_t* p_data, char* arg3, char* arg4, char arg5) {
 	
-	//printf("ALL: %s\n", (const char*)p_data);
 	for (const auto& pair : preFilesMap)
 	{
 		if (strncmp((const char*)p_data + 1, pair.first.c_str() + 1, strlen((const char*)p_data) - 5) == 0) // Compare the original data pointer with our files (without the ending and without the first letter to account for capital first letters)

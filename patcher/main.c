@@ -232,7 +232,7 @@ int main(int argc, char* argv[])
     else {
         printf("Failed to open file\n");
         printf("Usage (command line): %s <filename>\n", argv[0]);
-        printf("Usage (Windows Explorer): Drag THUG.exe onto the patcher or just double click it when THUG2.exe is in the same folder\n");
+        printf("Usage (Windows Explorer): Drag THUG2.exe onto the patcher or just double click it when THUG2.exe is in the same folder\n");
     }
     system("PAUSE");
     return 0;

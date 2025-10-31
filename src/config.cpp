@@ -46,6 +46,7 @@ bool savewindowposition;
 
 int resX;
 int resY;
+int screenmode;
 int defWidth;
 int defHeight;
 int windowposx;
@@ -107,6 +108,7 @@ void initPatch() {
 	graphics_settings.blurfix = getIniBool(GRAPHICS_SECTION, "UseBlurFix", 1, configFile);
 	resX = GetPrivateProfileInt(GRAPHICS_SECTION, "ResolutionX", 640, configFile);
 	resY = GetPrivateProfileInt(GRAPHICS_SECTION, "ResolutionY", 480, configFile);
+	screenmode = GetPrivateProfileInt(GRAPHICS_SECTION, "ScreenMode", 0, configFile);
 	isWindowed = getIniBool(GRAPHICS_SECTION, "Windowed", 0, configFile);
 	isBorderless = getIniBool(GRAPHICS_SECTION, "Borderless", 0, configFile);
 	Ps2Controls = getIniBool(CONTROLS_SECTION, "Ps2Controls", 1, configFile);
@@ -170,7 +172,14 @@ void initPatch() {
 		Log::TypedLog(CHN_DLL, "Clipping Distance\t\t\t\t\t%d\n", graphics_settings.clippingdistance);
 		Log::TypedLog(CHN_DLL, "Fog\t\t\t\t\t\t%s\n", graphics_settings.fog ? "Enabled" : "Disabled");
 	}
-	
+	switch (screenmode) {
+	case 1: Log::TypedLog(CHN_DLL, "Screen mode\t\t\t\t\t4:3\n", resX, resY);
+	case 2: Log::TypedLog(CHN_DLL, "Screen mode\t\t\t\t\t16:9\n", resX, resY);
+	case 3: Log::TypedLog(CHN_DLL, "Screen mode\t\t\t\t\t16:10\n", resX, resY);
+	case 4: Log::TypedLog(CHN_DLL, "Screen mode\t\t\t\t\t21:9\n", resX, resY);
+	case 5: Log::TypedLog(CHN_DLL, "Screen mode\t\t\t\t\t21:10\n", resX, resY);
+	default: Log::TypedLog(CHN_DLL, "Screen mode\t\t\t\t\tAutomatic\n", resX, resY);
+	}
 	switch (dropdowncontrol) {
 		case 1: Log::TypedLog(CHN_DLL, "DropDownControl: L2+R2 (PC default)\n"); break;
 		case 2: Log::TypedLog(CHN_DLL, "DropDownControl: L1\n"); break;
@@ -257,6 +266,8 @@ void initPatch() {
 		patchByte((void*)(0x004A19EA + 2), 0x04);
 	}
 
+	addScriptCFuncs();
+
 	/*TODO Connection fix*/
 	//patchCall((void*)0x004E056A, (void*)&runProfileConnectScript);
 	//patchByte((void*)0x004CF330, 0xEB);
@@ -269,8 +280,8 @@ void initPatch() {
 }
 
 void patchStaticValues() {
-	/*
-	* //TODO
+
+	//TODO
 	patchByte((void*)0x0052F70F, 0xEB);
 	patchByte((void*)(0x0052F7DF + 1), 0x00);
 	patchByte((void*)0x0053654F, 0xEB);
@@ -292,7 +303,7 @@ void patchStaticValues() {
 	patchByte((void*)(0x005F8AE4 + 6), 0x65); //reached
 	patchByte((void*)(0x005F8AEB + 6), 0x6E); //reached
 	patchDWord((void*)(0x005FBAF4 + 1), 0x00001388);
-	*/
+
 
 	/* Increase startup speed */
 	patchDWord((void*)(0x005F88F7 + 2), 0x000001F4); //reached
@@ -528,8 +539,13 @@ void createSDLWindow() {
 	patchDWord((void*)ADDR_WindowResoltionY, resY);
 
 	/* set aspect ratio and FOV */
+	//patchJump((void*)ADDR_FUNC_AspectRatio, setAspectRatio);
+	//patchJump((void*)ADDR_FUNC_ScreenAngleFactor, getScreenAngleFactor);
+
+	// set aspect ratio and FOV
 	patchJump((void*)ADDR_FUNC_AspectRatio, setAspectRatio);
-	patchJump((void*)ADDR_FUNC_ScreenAngleFactor, getScreenAngleFactor);
+	patchCall((void*)0x004467D8, setScreenAngleFactor);
+	patchCall((void*)0x0048C237, setScreenAngleFactor);
 }
 
 SDL_Window* getWindowHandle() {
@@ -560,16 +576,69 @@ void writeConfigValues() {
 }
 
 void __cdecl setAspectRatio(float aspect) {
-	*screenAspectRatio = (float)resX / (float)resY;
+	float aspect_ratio = 0;
+
+	switch (screenmode) {
+	case 1: aspect_ratio = 4.0f / 3.0f; break;			// 0x3FAAAAAB
+	case 2: aspect_ratio = 16.0f / 9.0f; break;			// 0x3FE38E39
+	case 3: aspect_ratio = 16.0f / 10.0f; break;		// 0x3FCCCCCD
+	case 4: aspect_ratio = 2560.0f / 1080.0f; break;	// 0x4017B426
+	case 5: aspect_ratio = 21.0f / 10.0f; break;		// 0x40066666
+	default: aspect_ratio = ((float)resX / (float)resY); break;
+	}
+
+	if (aspect_ratio < 1.33f)
+		aspect_ratio = 4.0f / 3.0f;
+
+	patchFloat((void*)0x00701340, aspect_ratio);
 }
 
-float __cdecl getScreenAngleFactor() {
-	return ((float)resX / (float)resY) / (4.0f / 3.0f);
-}
-
-/* called from patchScripts */
 float getaspectratio() {
+	// Returns the aspect ratio defined by the screen mode or the real aspect ratio calculated from width/height
 	return ((float)resX / (float)resY);
+}
+
+int get_screenmode() {
+	return screenmode;
+}
+
+typedef float __cdecl SetScreenAngleFactor_NativeCall(float fov);
+SetScreenAngleFactor_NativeCall* SetScreenAngleFactor_Native = (SetScreenAngleFactor_NativeCall*)(0x004A0B70);
+
+float AdjustHorizontalFOV(float verticalFOV, float aspectRatio) {
+	/*
+	Adjust horizontal FOV:
+		- Take half the vertical FOV
+		- Convert it to radians ( * pi / 180 )
+		- Calculate tan(x) in double precision
+		- Scale it with (aspectRatio / 1.33), using 4:3 as the baseline
+		- Apply atan to convert it back to an angle
+		- Multiply by 2, then by (180 / pi), then by 100
+		- Round and divide by 100
+	*/
+	float halfFov = verticalFOV * 0.5f;
+	float halfFovRadians = halfFov * 0.0174532924f;
+	double tanResult = tan((double)halfFovRadians);
+	float aspectScale = aspectRatio / 1.3333334f;
+	float horFactor = (float)tanResult * aspectScale;
+	double atanResult = atan((double)horFactor);
+	float angleRad = (float)atanResult;
+	float scaled = angleRad * 2.0f * 57.2957764f * 100.0f;
+	float result = roundf(scaled) / 100.0f;
+
+	return result;
+}
+
+float __cdecl setScreenAngleFactor(float fov) {
+	switch (screenmode) {
+	case 1: fov = 72.0f; break;
+	case 2: fov = 88.18f; break;
+	case 3: fov = 82.17f; break;
+	case 4: fov = 104.5f; break;
+	case 5: fov = 97.7f; break;
+	default: fov = AdjustHorizontalFOV(*(float*)0x00701348, *(float*)0x00701340); break;
+	}
+	return SetScreenAngleFactor_Native(fov);
 }
 
 /* called from patchScripts */
@@ -916,4 +985,183 @@ void dumpWindowPosition() {
 	char str_y[10]; sprintf(str_y, "%d", windowposy);
 	WritePrivateProfileString(GRAPHICS_SECTION, "WindowPosX", str_x, configFile);
 	WritePrivateProfileString(GRAPHICS_SECTION, "WindowPosY", str_y, configFile);
+}
+
+uint32_t GetValue(const char* appName, const char* keyName, uint32_t def) {
+	return GetPrivateProfileInt(appName, keyName, def, configFile);
+}
+
+void SetValue(const char* appName, const char* keyName, uint32_t new_value) {
+	char new_string[12];
+
+	sprintf_s(new_string, "%d", new_value);
+	WritePrivateProfileString(appName, keyName, new_string, configFile);
+}
+
+void GetStringValue(const char* appName, const char* keyName, const char* def, char* buffer) {
+	GetPrivateProfileString(appName, keyName, def, buffer, MAX_PATH, configFile);
+}
+
+int32_t GetSignedValue(const char* appName, const char* keyName, int32_t def) {
+	char returned[32];
+
+	GetStringValue(appName, keyName, "", returned);
+
+	if (strlen(returned))
+	{
+		int32_t final_value;
+		int32_t string_value = atoi(returned);
+		return string_value;
+	}
+
+	return def;
+}
+
+void SetStringValue(const char* appName, const char* keyName, char* buffer) {
+	WritePrivateProfileString(appName, keyName, buffer, configFile);
+}
+
+bool CFunc_GetINIValue(Script::LazyStruct* pParams, DummyScript* pScript) {
+	// Get section and key from script!
+	Script::LazyStructItem* section_item = pParams->GetItem(Script::QbKey("section"));
+
+	if (!section_item)
+	{
+		Log::TypedLog(CHN_DLL, "GetINIValue called with no section param!\n");
+		return 1;
+	}
+
+	// Get key from script!
+	Script::LazyStructItem* key_item = pParams->GetItem(Script::QbKey("key"));
+	if (!key_item) {
+		Log::TypedLog(CHN_DLL, "GetINIValue called with no key param!\n");
+		return 1;
+	}
+
+	char* get_section = (char*)(section_item->value);
+	char* get_key = (char*)(key_item->value);
+
+	int32_t default_value = 0;
+	Script::LazyStructItem* default_item = pParams->GetItem(Script::QbKey("default"));
+	if (default_item) {
+		default_value = default_item->value;
+	}
+
+	// Return it!
+	pScript->GetParams->AddInteger(Script::QbKey("value"), GetSignedValue(get_section, get_key, default_value));
+
+	return true;
+}
+
+bool CFunc_SetINIValue(Script::LazyStruct* pParams) {
+	// Get section and key from script!
+	Script::LazyStructItem* section_item = pParams->GetItem(Script::QbKey("section"));
+	if (!section_item)
+	{
+		Log::TypedLog(CHN_DLL, "SetINIValue called with no section param!");
+		return false;
+	}
+
+	// Get key from script!
+	Script::LazyStructItem* key_item = pParams->GetItem(Script::QbKey("key"));
+	if (!key_item) {
+		Log::TypedLog(CHN_DLL, "SetINIValue called with no key param!");
+		return false;
+	}
+
+	char* get_section = (char*)(section_item->value);
+	char* get_key = (char*)(key_item->value);
+
+	int new_value = pParams->GetInteger(Script::QbKey("value"));
+
+	SetValue(get_section, get_key, new_value);
+
+	return true;
+}
+
+bool CFunc_GetINIString(Script::LazyStruct* pParams, DummyScript* pScript) {
+	// Get section and key from script!
+	Script::LazyStructItem* section_item = pParams->GetItem(Script::QbKey("section"));
+	if (!section_item) {
+		Log::TypedLog(CHN_DLL, "GetStringValue called with no section param!");
+		return 1;
+	}
+
+	// Get key from script!
+	Script::LazyStructItem* key_item = pParams->GetItem(Script::QbKey("key"));
+	if (!key_item) {
+		Log::TypedLog(CHN_DLL, "GetStringValue called with no key param!");
+		return 1;
+	}
+
+	char* get_section = (char*)(section_item->value);
+	char* get_key = (char*)(key_item->value);
+
+	char default_string[MAX_PATH];
+	memset(&default_string, 0, sizeof(default_string));
+
+	Script::LazyStructItem* default_item = pParams->GetItem(Script::QbKey("default"));
+
+	if (default_item)
+		strncpy(default_string, (char*)(default_item->value), sizeof(default_string));
+
+	// Return it!
+	char returned_string[MAX_PATH];
+	memset(&returned_string, 0, sizeof(returned_string));
+
+	GetStringValue(get_section, get_key, default_string, returned_string);
+
+	if (strlen(returned_string) > 0)
+		pScript->GetParams->AddString(Script::QbKey("string_value"), returned_string);
+	else
+		pScript->GetParams->AddString(Script::QbKey("string_value"), default_string);
+
+	return true;
+}
+
+bool CFunc_SetINIString(Script::LazyStruct* pParams) {
+	// Get section and key from script!
+	Script::LazyStructItem* section_item = pParams->GetItem(Script::QbKey("section"));
+	if (!section_item){
+		Log::TypedLog(CHN_DLL, "SetINIString called with no section param!");
+		return 1;
+	}
+
+	// Get key from script!
+	Script::LazyStructItem* key_item = pParams->GetItem(Script::QbKey("key"));
+	if (!key_item)
+	{
+		Log::TypedLog(CHN_DLL, "SetINIString called with no key param!");
+		return 1;
+	}
+
+	char* get_section = (char*)(section_item->value);
+	char* get_key = (char*)(key_item->value);
+
+	char* new_string = pParams->GetString(Script::QbKey("value"));
+
+	SetStringValue(get_section, get_key, new_string);
+
+	return true;
+}
+
+/*
+	Call get/set functions from script (QScript syntax):
+
+	M_GetINIValue section = "Graphics" key = "Fog" default = 0
+	// After calling M_GetINIValue, the value is in the global variable
+	printf "Received value from INI: %d" d=<value>
+
+	M_GetINIString section="AdditionalMods" key="Folder" default=""
+	printf "Received value from INI: %g" g=<string_value>
+
+	M_SetINIValue section = "Graphics" key = "Fog" value = 1
+*/
+
+void addScriptCFuncs() {
+	Log::TypedLog(CHN_DLL, "Adding script CFuncs\n");
+	CFuncs::AddFunction("M_GetINIValue", CFunc_GetINIValue);
+	CFuncs::AddFunction("M_SetINIValue", CFunc_SetINIValue);
+	CFuncs::AddFunction("M_GetINIString", CFunc_GetINIString);
+	CFuncs::AddFunction("M_SetINIString", CFunc_SetINIString);
 }

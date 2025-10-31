@@ -21,6 +21,7 @@ set(SOURCE_FILES
 	"${SRC}/QB/LazyArray.cpp"
 	"${SRC}/QB/LazyStruct.cpp"
 	"${SRC}/QB/QB.cpp"
+	"${SRC}/QB/QBKey.cpp"
 	"${SRC}/script.cpp"
 	"${SRC}/event.cpp"
 	"${SRC}/Util/sb.cpp"
@@ -43,6 +44,7 @@ set(HEADER_FILES
 	"${SRC}/QB/LazyStruct.h"
 	"${SRC}/QB/malloc.h"
 	"${SRC}/QB/QB.h"
+	"${SRC}/QB/QBKey.h"
 	"${SRC}/script.h"
 	"${SRC}/QB/scriptcontent.h"
 	"${SRC}/Resources/resources.h"	
@@ -115,6 +117,11 @@ target_link_libraries(t2sdl-launcher PRIVATE
 target_include_directories(t2sdl-launcher PUBLIC
 	"${PROJECT_SOURCE_DIR}/src"
 	${INCLUDES}
+)
+
+set_target_properties(t2sdl-launcher 
+	PROPERTIES 
+	    OUTPUT_NAME "THUG2-SDL Launcher"
 )
 
 add_executable(thug2sdlpatcher)

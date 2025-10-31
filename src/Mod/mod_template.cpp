@@ -45,8 +45,8 @@ void __declspec(naked) wallrideanywhere_patch()
 	}
 }
 
+//Add a call to this function in DllMain
 void addCustomCFuncs() {
-	//Add a call to this function in DllMain
 	CFuncs::AddFunction("MYMOD_ToggleWallrideAnywhere", CFunc_ToggleWallrideAnywhere);
 	CFuncs::AddFunction("MYMOD_ToggleJankDrops", CFunc_ToggleJankDrops);
 	Log::TypedLog(CHN_DLL, "Adding custom CFuncs\n");

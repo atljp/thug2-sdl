@@ -32,29 +32,24 @@ This mod is still under development!
 
 ## TODO
 
-- Change GameSpy to OpenSpy
-- Fix menu controls
-- Console text logging to file (append / overwrite)
-- Error manager with crash reports
 - Move / resize borderless window without locking the thread
 - Textinput for more keyboard layouts: FR, UK, GER, RUS (new font?)
 - More special text characters
 - CAP surgeon mod
 - Vanilla / speedrun mode
   - Ability to bind ENTER to X / A button (Arcade menu)
-- THUG levels
-- Minimal launcher
-- Patcher with option to make custom executable without relying on the DLL being called d3d9.dll
-- Fix window focus being lost when pressing CTRL-ALT-DELETE
+- THUG levels (fix sound issue for certain terrains)
+- Minimal launcher + patcher
 - Player2 input for splitscreen
-- Option to move gamecontrollerdb into data folder
 - Fix broken savefiles having _ in the name
-- Menu to load online preferences
 - Ped items in Create-A-Skater
 - Include leftover files as sprays
 - Empty sticker texture
 - Colored text input
-- Prevent chat reset in netgames when starting/ending game or changing levels
+- THUG-SDL stuff
+- Settings for Airdrifs, BHRAs, DD spinlag, Swerve, Boostplants, Wallplants
+- Instantly save/load savegames without waiting anim
+- Make Proskater/PED as CAS
 
 ## MOD LOADER
 

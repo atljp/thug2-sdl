@@ -109,7 +109,7 @@ namespace Script {
 
 		new_item->flags = 0;
 		new_item->itemType = 0;
-		new_item->unkByteA = 0x0D;
+		//new_item->unkByteA = 0x0D;
 		new_item->key = 0;
 		new_item->next = 0;
 		new_item->value = 0;

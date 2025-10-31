@@ -15,6 +15,7 @@
 #include "QB/Qb.h"
 #include "script.h"
 #include "QB/CFuncs.h"
+#include "QB/QBKey.h"
 #include <Resources/resources.h>
 #include <event.h>
 #include <Logger/ErrorManager.h>
@@ -205,6 +206,13 @@ struct flashVertex {
 	float u, v;
 };
 
+struct DummyScript {
+	char unk1[20];
+	Script::LazyStruct* GetParams;
+	char unk2[176];
+	uint32_t mScriptNameChecksum;
+};
+
 void enforceMaxResolution();
 void createSDLWindow();
 void writeConfigValues();
@@ -219,18 +227,19 @@ void loadControllerBinds(struct controllerbinds* bindsOut);
 void loadKeyBinds(struct keybinds* bindsOut);
 int getIniBool(const char* section, const char* key, int def, char* file);
 int Rnd_fixed(int n);
-void setAspectRatio(float aspect);
-float getScreenAngleFactor();
+void __cdecl setAspectRatio(float aspect);
+float __cdecl setScreenAngleFactor(float fov);
+int get_screenmode();
 void patchWindow();
 void patch_button_font(uint8_t sel);
-float getScreenAngleFactor();
 float getaspectratio();
 void loadSettings(struct modsettings* settingsOut);
 void loadModSettings(struct extmodsettings* modsettingsOut);
 void getConfigFilePath(char mConfigFile[MAX_PATH]);
-void wallrideanywhere_patch();
+//void wallrideanywhere_patch();
 void WalkCamComponent_Update_Hook();
 void loadLogSettings(struct logsettings* settingsOut);
 void loadKeyBinds(struct keybinds* bindsOut);
 void loadControllerBinds(struct controllerbinds* bindsOut);
 void dumpWindowPosition();
+void addScriptCFuncs();
